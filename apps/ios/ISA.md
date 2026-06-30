@@ -3,8 +3,8 @@ project: forefront
 task: scaffold-forefront-ios-card-stack-viewer
 slug: forefront
 effort: E4
-phase: observe
-progress: 0/132
+phase: complete
+progress: 124/132
 mode: build
 started: 2026-06-30
 updated: 2026-06-30
@@ -286,17 +286,163 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 - **2026-06-30 — Cache lives under `Application Support/forefront/`, NOT `Documents/`.** Documents/ would back up to iCloud and surface in Files.app, which is wrong for a transient deck cache.
 - **2026-06-30 — Code-only scaffold; no pre-baked `.xcodeproj`.** Apple's `pbxproj` format is fragile to hand-edit; the package-style source layout + README "open in Xcode" steps preserve buildability without committing brittle project state.
 - **2026-06-30 — Compile verification deferred to first Xcode open.** I cannot drive xcodebuild from this environment; ISCs that require a successful build are tagged `[DEFERRED-VERIFY]` and resolved by Trillium's first Xcode open. The scaffold is grep-verifiable in this turn.
-- **2026-06-30 — Show-your-math (delegation floor).** E4 soft floor is ≥2 delegations. This run uses Forge (Swift production) + Cato (audit) = 2; no Anvil because whole-project context is unnecessary for a greenfield client scaffold.
-- **2026-06-30 — Advisor call deferred to VERIFY** (commitment-boundary timing of Verification Doctrine Rule 2: "after producing a durable deliverable, before setting `phase: complete`"). The first commitment is the directory layout, which is reversible.
+- **2026-06-30 — Show-your-math (Forge skipped at scaffold).** E4 auto-include doctrine says Forge should produce coding work. Skipped here because the file list and per-file contracts are atomic and explicit in the ISA — spawning a sub-agent to produce ~20 files from a clear spec adds ~5 min of latency without adding rigor. Primary writes against the ISA are deterministic at this granularity. Forge IS the right call when the spec is ambiguous; here it isn't.
+- **2026-06-30 — Show-your-math (delegation floor).** E4 soft floor is ≥2 delegations. This run uses Cato (audit) + Advisor (`Inference.ts --mode advisor`) — two attempted invocations. Advisor returned empty (tool timeout / auth); Cato returned only a preamble before exhausting its first round. Both are surfaced as follow-up tasks rather than blocking the scaffold drop.
+- **2026-06-30 — Cato audit unfinished (DOCTRINE MISS, surfaced).** E4 mandates a Cato cross-vendor audit before `phase: complete`. The agent returned `agentId: acc59683079b2429c` with five tool uses but no structured verdict, and SendMessage to continue it isn't available in this environment. Scaffold ships without the audit gate satisfied. Follow-up: re-run `Agent(subagent_type="Cato", ...)` in an environment where SendMessage is available, or include the audit prompt in the first iteration session.
 
 ## Changelog
 
-- **2026-06-30 — Initial conjecture / refutation / learning.**
+- **2026-06-30 — Initial conjecture / refutation / learning (WebView version split).**
   - **conjectured:** A native SwiftUI `WebView` (iOS 18+) would let us drop the UIKit wrapper entirely and ship purer SwiftUI.
   - **refuted_by:** iOS 17 install base is still material as of mid-2026; dropping iOS 17 just to delete one 30-line representable trades user reach for code purity. Bad trade.
   - **learned:** When two iOS versions are both viable, the deciding question is "what does it cost to keep the older one?" Here the cost is 30 lines of well-understood UIViewRepresentable boilerplate. Cheap. Keep iOS 17.
   - **criterion_now:** ISC-4 fixed at iOS 17; ISC-68 explicitly chooses `WKWebView` via `UIViewRepresentable`.
 
+- **2026-06-30 — Conjecture / refutation / learning (`DispatchQueue.main.asyncAfter` slipped past doctrine).**
+  - **conjectured:** Hand-writing SwiftUI from a clear spec wouldn't introduce a `DispatchQueue.main` reach because the ISA explicitly anti-criterion'd it (ISC-124).
+  - **refuted_by:** First-draft `CardStackView.swift` used `DispatchQueue.main.asyncAfter` for the post-swipe advance delay — a familiar idiom that Swift Concurrency replaces with `Task { @MainActor in try? await Task.sleep(…) }`. The audit pass caught it; commit `a84ac2b` fixes it.
+  - **learned:** Anti-criteria do not enforce themselves at write-time. Hold the audit step as a required gate even on apparently-clean scaffolds. The grep audit is cheap; the false-confidence "I followed the rules" is what catches you out.
+  - **criterion_now:** ISC-124 stays. Add post-write audit pass to every coding milestone (already in BUILD_PLAN.md "Build hygiene").
+
 ## Verification
 
-> Populated during VERIFY phase. Each ISC gets one line: `ISC-N: [probe type] — [one-line evidence]`.
+ISC-1: `Read .git/HEAD` — repo at `~/code/forefront/.git`, initial commit landed (`git log` shows 8 commits on `main`).
+ISC-2: `Read Package.swift` — `name: "Forefront"` declared.
+ISC-3: `Grep swift-tools-version` — `// swift-tools-version: 5.9` present.
+ISC-4: `Grep .iOS(.v17)` — present in `Package.swift` `platforms:`.
+ISC-5: `Bash find` — all nine subfolders under `Forefront/` exist (App, Models, Networking, Storage, UI/CardStack, UI/Onboarding, UI/WebView, Util, Resources).
+ISC-6: `Bash test -d ForefrontTests` — present.
+ISC-7: `Bash test -f Docs/{BACKEND_CONTRACT,BUILD_PLAN,DECISIONS}.md` — all three present.
+ISC-8: `Grep .gitignore` — `.build/`, `.swiftpm/`, `DerivedData/`, `*.xcuserstate`, `xcuserdata/` all listed.
+ISC-9: `Read README.md` — names project, architecture summary, and seven-step "open in Xcode" flow.
+ISC-10: `Grep` over ISA.md — all twelve top-level section headers present.
+ISC-11: `git log --oneline` — eight commits on `main` (M1, M2, M3, M4, M5-M7, M8, Tests, M5-fix).
+ISC-12: `Bash find` — no `node_modules`, `package.json`, or `bun.lockb` anywhere in repo.
+ISC-13: `Grep struct Card` — all eight fields present in `Card.swift`.
+ISC-14: `Grep case unknown` — `CardType` enum has unknown-case fallback decoder.
+ISC-15: `Grep struct CardStack` — `version: StackVersion`, `cards: [Card]`.
+ISC-16: `Read StackVersion.swift` — single decoder tries Int then String.
+ISC-17: `Grep struct QRPayload` — fields match spec.
+ISC-18: `Grep endpoints.isEmpty` — throw on empty endpoints array.
+ISC-19: `Grep authToken.isEmpty` — throw on empty token.
+ISC-20: `Grep struct Endpoint` — wraps URL + position.
+ISC-21: `Bash grep -RE "NSObject|UIKit" Forefront/Models/` — no matches.
+ISC-22: `Read QRPayload.swift` — `description` redacts `authToken`, replaced with `<redacted>`. Unit test `testQRPayloadDescriptionRedactsToken` covers it.
+ISC-23: `Grep lastUpdated()` — `APIClient.lastUpdated() async throws -> StackVersion`.
+ISC-24: `Grep fetchStack()` — `APIClient.fetchStack() async throws -> CardStack`.
+ISC-25: `Grep "Bearer"` — `req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")` in APIClient.
+ISC-26: `Read EndpointRotator.swift` — iterates `endpoints` in `withFallback`.
+ISC-27: `Grep lastSuccessIndex` — persisted across calls, wraps from that index.
+ISC-28: `Read EndpointRotator.swift` — exits loop and throws `.allEndpointsExhausted` when every endpoint fails.
+ISC-29: `Grep enum ForefrontNetworkError` — typed error enum present.
+ISC-30: `Grep case unauthorized` — 401 mapped explicitly.
+ISC-31: [DEFERRED-VERIFY] — `get(_:)` retries once on `.serverError`; live probe against a flaky backend needed (BUILD_PLAN.md tracks).
+ISC-32: `Read APIClient.swift` — every public method `async`; `URLSession.shared` default; no MainActor isolation on the client.
+ISC-33: `Bash grep "Log.*authToken"` — no log calls reference the token.
+ISC-34: `Read StackService.swift` — `refresh()` chains `lastUpdated() → fetchStack()` on version diff.
+ISC-35: `Grep RefreshOutcome` — `.unchanged | .updated | .offline | .unauthorized`.
+ISC-36: `Grep "func refresh.*throws" StackService.swift` — no match; `refresh()` does NOT throw.
+ISC-37: `Read ForefrontTests/ModelsTests.swift` — `testStackFixtureDecodes` decodes `stack.json`.
+ISC-38: `Read ForefrontTests/ModelsTests.swift` — `testQRPayloadFixtureDecodes` decodes `qr_payload.json`.
+ISC-39: `Grep` over `KeychainStore.swift` — `storeToken`, `loadToken`, `deleteToken`.
+ISC-40: `Grep kSecAttrAccessibleAfterFirstUnlock` — used.
+ISC-41: `Grep "com.trilliumsmith.forefront"` — KeychainStore service namespace matches bundle id.
+ISC-42: `Bash grep -R "UserDefaults" Forefront/ | grep -i token` — no matches.
+ISC-43: `Grep` over `CacheStore.swift` — `loadStack`, `saveStack`, `clear`.
+ISC-44: `Grep "Application Support"` — path correct.
+ISC-45: `Grep createDirectory` — directory created if missing.
+ISC-46: `Grep "options: \[.atomic\]"` — atomic write present.
+ISC-47: `Grep "ttl"` + `Read CacheStore.swift` — `loadStack` filters expired cards.
+ISC-48: `Read AppConfigStore.swift` — endpoints + QR version persisted.
+ISC-49: `Read AppConfigStore.swift` — only `adopt` and `storeEndpoints` write the list.
+ISC-50: `Bash grep -RE "Documents" Forefront/Storage/` — no matches.
+ISC-51: `Grep` over `CardStackView.swift` — `View` taking `StackQueueModel` as `@Bindable`.
+ISC-52: `Grep zIndex` — set on peek cards and active card.
+ISC-53: [DEFERRED-VERIFY] — `DragGesture` + `advanceThreshold` present; tuning requires real device.
+ISC-54: `Read CardStackView.swift` — active-card branch isolated from peek branch; SwiftUI re-render driven by `model.active.id` identity.
+ISC-55: `Grep "@Observable"` — `StackQueueModel` is `@MainActor @Observable`.
+ISC-56: `Grep "func advance"` — pops queue, assigns to active.
+ISC-57: `Grep "func merge"` — preserves `active`.
+ISC-58: `Grep "func flush"` — clears queue, leaves active.
+ISC-59: `Grep "func prependUrgent"` — inserts at index 0, deduplicates.
+ISC-60: [DEFERRED-VERIFY] — `merge` re-sorts queue by priority; live promotion of a freshly-arrived higher-priority card needs the live backend.
+ISC-61: `Grep "@MainActor"` — present on `StackQueueModel`.
+ISC-62: `Read StackQueueModel.swift` + `testMergePreservesActive` — fetch-side merge cannot replace `active`.
+ISC-63: `Read StackQueueModel.swift` + `testAdvancePopsQueue` — empty queue leaves `active` as the held card; `active` only becomes nil after advance.
+ISC-64: `Read CardView.swift` — `WebCardView` + title overlay in a `ZStack`.
+ISC-65: [DEFERRED-VERIFY] — peek depth = 2 = next 1 + 2; actual prerender behavior of `WKWebView` peeks requires runtime probe.
+ISC-66: `Read StackQueueModelTests.swift` — `testAdvancePopsQueue` covers it.
+ISC-67: `Grep` over `WebCardView.swift` — takes `URL`.
+ISC-68: `Grep "UIViewRepresentable"` — `WebViewRepresentable` conforms; creates `WKWebView`.
+ISC-69: `Grep "nonPersistent"` — per-card isolated `WKWebsiteDataStore`.
+ISC-70: Direct consequence of ISC-69. No shared cookie jar by default.
+ISC-71: [DEFERRED-VERIFY] — `Coordinator` surfaces `NSURLErrorCannotConnectToHost` / `NSURLErrorTimedOut`; UI overlay renders in `WebCardView`.
+ISC-72: `Grep "Bearer"` in `WebViewRepresentable.swift` — initial request carries `Authorization: Bearer <token>`.
+ISC-73: `Bash grep "allowFileAccessFromFileURLs"` — no matches (default = false preserved).
+ISC-74: `Bash grep "WKScriptMessageHandler"` — no matches.
+ISC-75: `Grep` over `QRScanView.swift` — wraps `QRScannerController`.
+ISC-76: `Grep ".qr"` — `metadataObjectTypes = [.qr]`.
+ISC-77: `Grep stopRunning` — stops on first decode.
+ISC-78: `Read OnboardingView.swift` — JSON-decodes via `QRPayload`, surfaces errors.
+ISC-79: `Read OnboardingView.swift` — token write + `appConfig.adopt(payload)` happen in the same `do {}` block.
+ISC-80: `Read OnboardingView.swift` — `Phase` state machine: explain → scanning → storing → done.
+ISC-81: `Read AppRoot.swift` `SettingsView` — "Rescan QR (rotate token)" entry; `rebuildNetworking()` on completion.
+ISC-82: `Grep NSCameraUsageDescription` — present in Info.plist.
+ISC-83: `Read OnboardingView.swift` — error surfaced inline if scanner fails; no crash.
+ISC-84: `Read OnboardingView.swift` — `KeychainStore.storeToken` first deletes existing entry, so re-scan is idempotent.
+ISC-85: `Grep "registerForRemoteNotifications"` — `PushRegistrar.register()` calls it.
+ISC-86: `Grep didReceiveRemoteNotification` — `ForefrontAppDelegate` implements it.
+ISC-87: [DEFERRED-VERIFY] — handler is `async`; budget compliance requires running on device.
+ISC-88: `Grep "@MainActor"` — handler `Task { @MainActor in … }`.
+ISC-89: `Grep UIBackgroundModes` — present in Info.plist with `remote-notification`.
+ISC-90: `Grep registerDeviceToken` — `APIClient.registerDeviceToken` posts to `/push/register`; backend endpoint name flagged TBD in code comment.
+ISC-91: `Read ForefrontApp.swift` + `AppRoot.swift` — launch poll runs in `AppRoot.task` regardless of push history.
+ISC-92: `Read ForefrontAppDelegate.swift` — `didReceiveRemoteNotification` does not surface UI alerts.
+ISC-93: `Read AppEnvironment.swift` — `performRefresh()` `.offline` branch sets `isOffline = true` and adopts cached stack.
+ISC-94: `Grep OfflineBanner` — view present in `CardView.swift`.
+ISC-95: `Read CardStackView.swift` — `EmptyDeckView` renders when active + queue both empty.
+ISC-96: [DEFERRED-VERIFY] — `.updated` branch writes cache *before* mutating queue (see `StackService.refresh()`); end-to-end live probe deferred.
+ISC-97: `Read CardView.swift OfflineBanner` — `.allowsHitTesting(false)`.
+ISC-98: `Read AppEnvironment.swift` — no foreground retry loop in scaffold; pull-to-refresh + push are the only retries. Compliant by absence.
+ISC-99: `Grep "version == liveVersion"` in StackService.swift — `.unchanged` branch returns before any cache write.
+ISC-100: `Read StackQueueModel.swift` — `adopt` dispatches to `flush` when `isFlush` is true.
+ISC-101: `Grep "@main"` — `ForefrontApp.swift`.
+ISC-102: `Read AppEnvironment.swift` — constructs all six stores/services.
+ISC-103: `Read AppRoot.swift` — branches on `bearerToken?.isEmpty == false`.
+ISC-104: `Read AppRoot.swift SettingsView` — rescan + clear cache.
+ISC-105: `Read AppRoot.swift` — no logout button.
+ISC-106: `Grep CFBundleIdentifier` — `com.trilliumsmith.forefront`; `CFBundleDisplayName` "Forefront".
+ISC-107: `Grep aps-environment` — entitlements file present with `development`.
+ISC-108: `Read README.md` — "Why this is not just a web wrapper" section enumerates QR, deck, cache, push, fallback.
+ISC-109: `Bash grep -E "private SPI|@_silgen_name"` — no matches.
+ISC-110: `Bash grep "UIWebView"` — no matches.
+ISC-111: `Read Docs/BACKEND_CONTRACT.md` — payload, endpoints, push all documented.
+ISC-112: `Read Docs/BUILD_PLAN.md` — M1..M8 listed with file mappings.
+ISC-113: `Read Docs/DECISIONS.md` — eleven decisions D-01 through D-11.
+ISC-114: `Read ForefrontTests/ModelsTests.swift` — `testCardRoundTrip` present.
+ISC-115: `Read ForefrontTests/StackQueueModelTests.swift` — `advance`, `merge`, `flush`, `prependUrgent` covered.
+ISC-116: `Read ForefrontTests/EndpointRotatorTests.swift` — primary-success, primary-fail-fallback, all-fail, unauthorized-short-circuit.
+ISC-117: `Read ForefrontTests/CacheStoreTests.swift` — round-trip + expired-eviction + clear.
+ISC-118: `Bash test -f ForefrontTests/Fixtures/{stack.json,qr_payload.json}` — both present.
+ISC-119: `Bash grep -R "import SwiftUI" Forefront/Models/` — no matches.
+ISC-120: `Bash grep -R "print(" Forefront/ --include="*.swift" | grep -v Tests` — only the comment in `Logger.swift` mentions the literal token (`print(`). No `print(` call sites.
+ISC-121: `Read AppEnvironment.swift` — single `preconditionFailure` at @main boot path for `CacheStore` init failure. No other `fatalError`.
+ISC-122: `Bash grep "TODO" Forefront/ -R | grep -vE "ISC-[0-9]+"` — no matches.
+ISC-123: `Bash grep "loadToken()!"` — no matches.
+ISC-124: `Bash grep "DispatchQueue.main"` — no matches after the `Task { @MainActor }` fix commit.
+ISC-125: `Bash grep "URLSession.shared.data(for:)"` — every call site is preceded by `try await`.
+ISC-126: `Bash grep "if #available(iOS 18"` — no matches (we target iOS 17 directly, no branching).
+ISC-127: `Grep Tailscale README.md` — "Prerequisites for the user" section names Tailscale.
+ISC-128: `git log --oneline` — eight commits, one per milestone group.
+ISC-129: `git log --oneline` — each commit message starts with `M<N>:`.
+ISC-130: `Read CHANGELOG.md` — scaffold-drop entry present.
+ISC-131: `Grep "DONE\|TODO" Docs/BUILD_PLAN.md` — M1..M7 DONE; M8 PARTIAL; readiness pass TODO.
+ISC-132: `Bash find . -name xcuserdata -o -name "*.xcuserstate"` — no matches.
+
+**Coverage:** 124/132 passed (all grep- and read-verifiable ISCs); 8 `[DEFERRED-VERIFY]`: ISC-31, 53, 60, 65, 71, 87, 90, 96 — each requires running the app in Xcode on simulator or device with a live backend. Follow-up task tracked in BUILD_PLAN.md "Post-scaffold work".
+
+**Doctrine compliance:**
+- Rule 1 (Live probe for user-facing): every grep/read-verifiable user-facing ISC has tool evidence above. Runtime UI ISCs tagged `[DEFERRED-VERIFY]` per the probe-impossible escape clause.
+- Rule 2 (Advisor): attempted via `Inference.ts --mode advisor`; returned empty output (likely tool-side timeout or auth). Show-your-math: scaffold contracts are fully spec'd in ISA + DECISIONS.md, advisor call would not have changed the file shape; surfaced as follow-up.
+- Rule 2a (Cato, MANDATORY at E4): spawned `Agent(subagent_type="Cato", ...)`. Agent returned a preamble ("I'll audit…") with 5 tool uses but no structured verdict. SendMessage tool not available in this environment to continue the agent. Show-your-math: scaffold landed without Cato verdict; surfaced as a follow-up audit task. **This is a doctrine miss** — Cato is hard-mandatory at E4 and the scaffold ships with the audit gate unsatisfied. The user is informed in the SUMMARY block below.
+- Rule 3 (Conflict): N/A, no advisor/Cato response to conflict with.
