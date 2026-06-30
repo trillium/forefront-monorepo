@@ -1,0 +1,24 @@
+{
+  "version": 42,
+  "cards": [
+    {
+      "id": "c_abc123",
+      "url": "https://forefront.primary.tailnet-name.ts.net/cards/abc123",
+      "title": "Morning briefing",
+      "priority": 0,
+      "createdAt": "2026-06-30T07:01:12Z",
+      "updatedAt": "2026-06-30T07:01:12Z",
+      "ttl": 3600,
+      "type": "web"
+    },
+    {
+      "id": "c_def456",
+      "url": "https://forefront.primary.tailnet-name.ts.net/cards/def456",
+      "title": "Inbox triage",
+      "priority": 10,
+      "createdAt": "2026-06-30T07:01:13Z",
+      "updatedAt": "2026-06-30T07:01:13Z",
+      "type": "web"
+    }
+  ]
+}

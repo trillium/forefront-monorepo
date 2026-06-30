@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "endpoints": [
+    "https://forefront.primary.tailnet-name.ts.net",
+    "https://forefront.fallback-1.tailnet-name.ts.net"
+  ],
+  "authToken": "test-token-do-not-ship",
+  "push": { "topic": "com.trilliumsmith.forefront" }
+}
