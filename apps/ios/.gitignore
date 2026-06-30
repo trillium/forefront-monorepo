@@ -1,0 +1,27 @@
+## Build artifacts
+.build/
+.swiftpm/
+DerivedData/
+build/
+
+## Xcode user state
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad/
+*.xccheckout
+*.moved-aside
+
+## macOS
+.DS_Store
+
+## Swift Package Manager
+Package.resolved
+
+## App-specific
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Tooling
+*.log
+.tmp/
