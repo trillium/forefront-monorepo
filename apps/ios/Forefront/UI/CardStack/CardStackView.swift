@@ -45,7 +45,8 @@ public struct CardStackView: View {
                                                 height: 0
                                             )
                                         }
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                        Task { @MainActor in
+                                            try? await Task.sleep(nanoseconds: 250_000_000)
                                             model.advance()
                                             dragOffset = .zero
                                         }
