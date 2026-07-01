@@ -1,13 +1,14 @@
 ---
 project: forefront
-task: scaffold-forefront-ios-card-stack-viewer
+task: forefront-iteration-2-compile-fix-and-feature-plan
 slug: forefront
 effort: E4
-phase: complete
-progress: 124/132
+phase: build
+progress: 124/168
 mode: build
 started: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-01
+iteration: 2
 ---
 
 # Forefront — Project ISA
@@ -62,7 +63,7 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 
 ## Criteria
 
-> ISC count: 132. Tier floor E4 = 128 (met). All anti-criteria and antecedents are interleaved by domain. Each ISC is a single binary tool probe.
+> ISC count: 168 (132 from the scaffold drop + 36 added in iteration 2, 2026-07-01). Tier floor E4 = 128 (met). All anti-criteria and antecedents are interleaved by domain. Each ISC is a single binary tool probe.
 
 ### Domain A — Project layout & build (D1: scaffold)
 
@@ -238,6 +239,73 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 - [ ] ISC-131: `Docs/BUILD_PLAN.md` marks milestones M1–M2 as DONE for this scaffold drop, M3–M8 as TODO with the per-milestone file list (`Grep "DONE\|TODO"`)
 - [ ] ISC-132: Anti: the scaffold does NOT contain any `xcuserdata/` or `*.xcuserstate` artifacts (they are gitignored) (`Bash find`)
 
+### Domain O — Iteration 2: Build health (F1)
+
+> Root cause recorded 2026-07-01: the scaffold's 124 "passed" ISCs were grep-probes; the first real `swift test` failed to compile. Compile health is now a first-class criterion.
+
+- [ ] ISC-133: `swift test` compiles and all tests pass with exit code 0 (`Bash swift test`)
+- [ ] ISC-134: `Package.swift` gives the Storage target an explicit dependency on the Models target (`Grep Package.swift`)
+- [ ] ISC-135: `swift build` emits zero warnings (`Bash swift build 2>&1 | grep -c warning` returns 0)
+- [ ] ISC-136: `Scripts/check-ui-compile.sh` exists and type-checks the UI + App layer against the iOS simulator SDK, exiting 0 (`Bash Scripts/check-ui-compile.sh`)
+- [ ] ISC-137: Anti: no `@unchecked Sendable` lands without an adjacent comment stating the concrete thread-safety argument (`Bash grep -B2 "@unchecked Sendable"`)
+
+### Domain P — Iteration 2: Refresh single-flight coalescing (F2)
+
+> Structural prerequisite (causal-loop analysis 2026-07-01): launch task, pull-to-refresh, silent push, onboarding, and any future trigger can race `refresh()`; equality-only `StackVersion` means out-of-order `adopt()` cannot be version-guarded — the fix is loop structure, not ordering.
+
+- [ ] ISC-138: `StackService.refresh()` is single-flight — concurrent callers await one shared in-flight task (`Grep "inFlight" StackService.swift`)
+- [ ] ISC-139: A unit test proves two concurrent `refresh()` calls produce exactly one `/stack/last-updated` probe (`Read ForefrontTests/StackServiceTests.swift`)
+- [ ] ISC-140: Auto-triggered refreshes (foreground, push) enforce a ≥30s minimum interval via a `lastAttemptAt` guard; explicit user refresh bypasses it (`Grep "lastAttemptAt"`)
+- [ ] ISC-141: Anti: one coalesced refresh outcome produces at most one `adopt()` call (`Read` test asserting adopt-count)
+
+### Domain Q — Iteration 2: Mock-network test harness (F3)
+
+> Converts formerly device-only DEFERRED-VERIFY ISCs (31, 60, 96, 99) into deterministic unit tests via a URLProtocol stub.
+
+- [ ] ISC-142: `ForefrontTests/MockURLProtocol.swift` exists and intercepts URLSession requests with scriptable per-request responses (`Read`)
+- [ ] ISC-143: Test: HTTP 5xx from the primary endpoint retries once, then falls through to the next endpoint (converts ISC-31) (`Read`)
+- [ ] ISC-144: Test: HTTP 401 short-circuits rotation and surfaces `.unauthorized` without trying remaining endpoints (`Read`)
+- [ ] ISC-145: Test: refresh returning an unchanged version performs zero cache writes (converts ISC-99) (`Read`)
+- [ ] ISC-146: Test: a successful fetch writes cache before the queue adopts the new stack (converts ISC-96) (`Read`)
+- [ ] ISC-147: Test: a higher-priority card arriving via merge sorts to queue index 0 (converts ISC-60) (`Read`)
+
+### Domain R — Iteration 2: Foreground refresh + token-rotation UX (F4, F5)
+
+- [ ] ISC-148: A `scenePhase` transition to `.active` triggers a throttled `refresh()` (`Grep "scenePhase"`)
+- [ ] ISC-149: A `.unauthorized` refresh outcome surfaces a visible re-scan prompt, not a silent offline state (`Grep "unauthorized" UI layer`)
+- [ ] ISC-150: The re-scan prompt routes into the existing rescan flow and preserves the cached deck on disk (`Grep`)
+- [ ] ISC-151: Anti: no foreground refresh path can replace `active` — merge semantics only (`Read` test)
+
+### Domain S — Iteration 2: Deck UX pack (F8)
+
+- [ ] ISC-152: A deck position indicator renders "N of M" over the active card (`Grep "of" CardStackView/CardView`)
+- [ ] ISC-153: A masthead renders day-part greeting + card count above the deck (`Grep "Masthead"`)
+- [ ] ISC-154: When offline, a staleness line shows the last successful refresh time (`Grep "lastRefreshed"`)
+- [ ] ISC-155: Card advance fires haptic feedback (`.sensoryFeedback` or `UIImpactFeedbackGenerator`) (`Grep`)
+- [ ] ISC-156: New cards arriving in the queue tick the deck count without touching `active` (`Read` test or `Grep`)
+- [ ] ISC-157: Anti: no UX overlay intercepts hit-testing of the web content (`Grep "allowsHitTesting(false)"` on overlays)
+
+### Domain T — Iteration 2: Undo swipe (F6 — recorded, next build slot)
+
+> Invariant restatement required first: "user gestures own `active`; system events own the queue." Undo is then invariant-conforming.
+
+- [ ] ISC-158: `StackQueueModel` owns a swipe-history stock pushed at gesture-commit time (`Grep "history"`)
+- [ ] ISC-159: `undo()` restores the previous active card, deduplicating against the queue by id (`Grep "func undo"` + test)
+- [ ] ISC-160: Any `adopt()` carrying a changed version clears the undo history (version-scoped undo) (`Read` test)
+- [ ] ISC-161: The invariant doc comment on `StackQueueModel` is restated as "user gestures own active; system events own the queue" (`Grep`)
+
+### Domain U — Iteration 2: App Review demo mode (F7 — recorded, next build slot)
+
+> Distribution blocker found 2026-07-01: App Review cannot join the tailnet; without a demo path a reviewer sees a dead app. Demo must short-circuit `refresh()`, not survive it.
+
+- [ ] ISC-162: A `StackRefreshing` protocol seam exists; `StackService` conforms; `AppEnvironment` injects the seam (`Grep "StackRefreshing"`)
+- [ ] ISC-163: `DemoStackService` serves a bundled fixture deck with zero network calls (`Read`)
+- [ ] ISC-164: The demo flag lives in `AppConfigStore` (unsigned preference) — never in Keychain (`Grep`)
+- [ ] ISC-165: `AppRoot` gains a third branch: demo mode renders the deck without a token (`Grep`)
+- [ ] ISC-166: Push registration is gated off while demo mode is active (`Grep`)
+- [ ] ISC-167: Anti: demo mode never writes to the real `stack.json` cache (`Read` test or namespaced/no-op cache in `DemoStackService`)
+- [ ] ISC-168: README App Review notes document how a reviewer activates demo mode (`Grep README.md`)
+
 ## Test Strategy
 
 | isc range | type | check | threshold | tool |
@@ -256,6 +324,13 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 | ISC-114..118 | filesystem | tests present + fixtures present | files exist | `Read` / `Bash test` |
 | ISC-119..127 | source-grep | anti-pattern audit clean | grep returns nothing forbidden | `Bash grep -R` |
 | ISC-128..132 | git + filesystem | commit history + ignore working | git log + find clean | `Bash git log` / `find` |
+| ISC-133..137 | compile + build-log | package compiles, tests pass, zero warnings, UI type-checks | exit 0 / count 0 | `Bash swift test` / `swift build` / `Scripts/check-ui-compile.sh` |
+| ISC-138..141 | source-grep + unit-test | single-flight + throttle mechanics | grep + test present and passing | `Grep` / `Bash swift test` |
+| ISC-142..147 | unit-test | mock-network behavior probes | tests present and passing | `Read` / `Bash swift test` |
+| ISC-148..151 | source-grep + unit-test | scenePhase hook + 401 UX + invariant | grep + test passing | `Grep` / `Bash swift test` |
+| ISC-152..157 | source-grep | UX surfaces present, hit-testing clean | grep returns expected line | `Grep` |
+| ISC-158..161 | source-grep + unit-test | undo mechanics + invariant restatement | grep + test passing | `Grep` / `Bash swift test` |
+| ISC-162..168 | source-grep + unit-test + docs | demo seam, isolation, README notes | grep + test + doc line | `Grep` / `Read` |
 
 **Deferred verification:** ISCs 31, 53, 60, 65, 71, 87, 90, 96 — runtime behavior. Marked `[DEFERRED-VERIFY]` once code lands; live probe requires running the app on a real device or simulator with a backend. Follow-up task: open in Xcode, run on simulator, complete deferred verification pass.
 
@@ -274,6 +349,15 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 | Distribution + readiness pass | ISC-106..113 | M1..M8 | last (gate) |
 | Anti-pattern + lifecycle audit | ISC-119..132 | M1..M8 | last (gate) |
 | Tests + fixtures | ISC-114..118 | M2..M5 | with M5..M8 |
+| **F1: Compile health** (iter 2, P0) | ISC-133..137 | scaffold | no (gates everything) |
+| **F2: Refresh single-flight coalescer** (iter 2, P0) | ISC-138..141 | F1 | no (structural base for F4/F7) |
+| **F3: Mock-network test harness** (iter 2, P1) | ISC-142..147 | F1 | with F2 (test-side files) |
+| **F4: Foreground refresh + 30s throttle** (iter 2, P1) | ISC-148, ISC-140, ISC-151 | F2 | with F5 |
+| **F5: 401 → guided re-scan UX** (iter 2, P1) | ISC-149, ISC-150 | F1 | with F4 |
+| **F8: Deck UX pack** (iter 2, P2) | ISC-152..157 | F1 | with F4/F5 |
+| **F6: Undo swipe** (iter 2, P2 — next slot) | ISC-158..161 | F2 | with F7 |
+| **F7: App Review demo mode** (iter 2, P2 — next slot) | ISC-162..168 | F2 | with F6 |
+| **F9: Future surfaces** (recorded, unscheduled) | TBD — ISCs authored when scheduled: WidgetKit lock-screen widget, WKWebView snapshot peeks, swipe-down send-to-back, BGAppRefreshTask fallback, endpoint-health readout in Settings | F1..F8 | — |
 
 ## Decisions
 
@@ -288,6 +372,13 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 - **2026-06-30 — Compile verification deferred to first Xcode open.** I cannot drive xcodebuild from this environment; ISCs that require a successful build are tagged `[DEFERRED-VERIFY]` and resolved by Trillium's first Xcode open. The scaffold is grep-verifiable in this turn.
 - **2026-06-30 — Show-your-math (Forge skipped at scaffold).** E4 auto-include doctrine says Forge should produce coding work. Skipped here because the file list and per-file contracts are atomic and explicit in the ISA — spawning a sub-agent to produce ~20 files from a clear spec adds ~5 min of latency without adding rigor. Primary writes against the ISA are deterministic at this granularity. Forge IS the right call when the spec is ambiguous; here it isn't.
 - **2026-06-30 — Show-your-math (delegation floor).** E4 soft floor is ≥2 delegations. This run uses Cato (audit) + Advisor (`Inference.ts --mode advisor`) — two attempted invocations. Advisor returned empty (tool timeout / auth); Cato returned only a preamble before exhausting its first round. Both are surfaced as follow-up tasks rather than blocking the scaffold drop.
+- **2026-07-01 — Iteration 2 opened: compile-first.** First-ever `swift test` failed (Storage target missing Models dependency; `.atomic` contextual-type error in CacheStore; Swift-6 Sendable warnings). Root cause: scaffold ISCs were grep-verified only. Compile health promoted to first-class criteria (Domain O); every future milestone requires `swift test` green before ISC check-off.
+- **2026-07-01 — Single-flight `refresh()` before any new trigger.** Causal-loop analysis: launch task, pull-to-refresh, silent push, and onboarding can already race `refresh()`; equality-only `StackVersion` (last-write-wins doctrine) means an ordering guard in `adopt()` is impossible. Coalescing at the service is the only doctrine-compatible fix, and it makes foreground refresh (F4) and demo mode (F7) safe by construction. Lands before F4.
+- **2026-07-01 — Invariant restated for undo.** "Active card is sacred" becomes "user gestures own `active`; system events own the queue." Undo (a user gesture) then conforms. Undo history is version-scoped: any `adopt()` with a new version clears it; restore dedupes by id. Keeps last-write-wins intact; undo never touches cache or version cursor.
+- **2026-07-01 — Demo mode is a composition-root swap, not conditionals.** App Review cannot join the tailnet — a reviewer would see a dead app (distribution blocker, previously unrecorded). Fix: `StackRefreshing` protocol seam injected at `AppEnvironment`, `DemoStackService` over a bundled fixture, flag in `AppConfigStore`, push registration gated. Demo short-circuits `refresh()` rather than surviving its failure, so no offline-banner leak and no cache contamination.
+- **2026-07-01 — Iteration-2 prioritization.** P0: F1 compile health, F2 coalescer (foundation). P1: F3 mock-network harness (converts 4 DEFERRED-VERIFY ISCs to unit tests), F4 foreground refresh, F5 401 re-scan UX. P2: F8 deck UX pack now; F6 undo + F7 demo mode recorded with full ISCs for the next build slot. F9 futures recorded without ISCs. Rationale: foundation → safety → daily-feel; demo mode blocks only submission, not daily use.
+- **2026-07-01 — refined: refresh state machine owned by one agent (Advisor).** Advisor flagged that coalescer, 30s throttle, foreground trigger, and 401 handling all touch one refresh path and race each other if split across agents. Forge-1 scope widened to F1–F5; Forge-2 narrowed to F8 (pure UI). Hard handoff gate: Forge-1 must end committed + `swift test` green.
+- **2026-07-01 — EnterPlanMode skipped (show-your-math).** The user pre-approved execution in the request ("you may launch sub agents to fulfill those needs after you have recorded them"), so presenting a plan and stopping would contradict the explicit instruction.
 - **2026-06-30 — Cato audit unfinished (DOCTRINE MISS, surfaced).** E4 mandates a Cato cross-vendor audit before `phase: complete`. The agent returned `agentId: acc59683079b2429c` with five tool uses but no structured verdict, and SendMessage to continue it isn't available in this environment. Scaffold ships without the audit gate satisfied. Follow-up: re-run `Agent(subagent_type="Cato", ...)` in an environment where SendMessage is available, or include the audit prompt in the first iteration session.
 
 ## Changelog
