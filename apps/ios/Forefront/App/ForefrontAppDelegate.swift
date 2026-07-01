@@ -46,7 +46,8 @@ public final class ForefrontAppDelegate: NSObject, UIApplicationDelegate {
     ) {
         Task { @MainActor in
             let env = AppEnvironment.shared
-            let outcome = await env.service.refresh()
+            // Silent push is an automatic trigger — throttled and coalesced.
+            let outcome = await env.service.refresh(trigger: .automatic)
             switch outcome {
             case .unchanged: completionHandler(.noData)
             case .updated(let stack):
@@ -55,7 +56,11 @@ public final class ForefrontAppDelegate: NSObject, UIApplicationDelegate {
             case .offline:
                 completionHandler(.failed)
             case .unauthorized:
+                env.needsReauth = true
                 completionHandler(.failed)
+            case .throttled:
+                // A refresh ran too recently; nothing new to report.
+                completionHandler(.noData)
             }
         }
     }

@@ -21,6 +21,9 @@ public final class AppEnvironment {
     public let queue: StackQueueModel
     public private(set) var bearerToken: String?
     public private(set) var isOffline: Bool = false
+    /// F5: set when a refresh returns `.unauthorized`. Drives a visible re-scan
+    /// prompt on the deck. The cached deck stays on disk and swipeable.
+    public var needsReauth: Bool = false
 
     public init() {
         let keychain = KeychainStore()
@@ -60,10 +63,16 @@ public final class AppEnvironment {
         bearerToken = (try? keychain.loadToken()) ?? nil
     }
 
-    /// Run the launch refresh path: poll last-updated, fetch if changed,
-    /// fall through to cache on failure.
-    public func performRefresh() async {
-        let outcome = await service.refresh()
+    /// Run the refresh path: poll last-updated, fetch if changed, fall through to
+    /// cache on failure. `trigger` governs the 30s automatic throttle inside the
+    /// service — `.userInitiated` (pull-to-refresh) bypasses it; `.automatic`
+    /// (launch, foreground, push) is throttled.
+    ///
+    /// Merge-only invariant (ISC-151): every branch routes new stacks through
+    /// `queue.adopt(...)`, which merges without replacing the sacred `active`
+    /// card. No branch here assigns `active` directly.
+    public func performRefresh(trigger: RefreshTrigger = .automatic) async {
+        let outcome = await service.refresh(trigger: trigger)
         switch outcome {
         case .unchanged:
             isOffline = false
@@ -77,8 +86,14 @@ public final class AppEnvironment {
             isOffline = true
             if let cached, queue.active == nil { queue.adopt(cached) }
         case .unauthorized:
+            // F5: surface a guided re-scan prompt instead of a silent offline
+            // state. The cached deck on disk is preserved (no cache clear).
             isOffline = false
-            bearerToken = nil
+            needsReauth = true
+        case .throttled:
+            // Automatic refresh suppressed by the 30s guard. Nothing to do —
+            // the current deck and offline state stand.
+            break
         }
     }
 
