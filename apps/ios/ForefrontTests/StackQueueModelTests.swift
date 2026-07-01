@@ -1,9 +1,6 @@
-#if canImport(SwiftUI)
 import XCTest
 @testable import ForefrontModels
-// Note: StackQueueModel lives in the Xcode iOS app target (it imports SwiftUI's
-// Observation framework). These tests are compiled by Xcode under the app target's
-// test target rather than `swift test`. The file is retained here for that path.
+@testable import ForefrontQueue
 
 @MainActor
 final class StackQueueModelTests: XCTestCase {
@@ -68,4 +65,3 @@ final class StackQueueModelTests: XCTestCase {
         XCTAssertEqual(model.queue.first?.id, "b")
     }
 }
-#endif

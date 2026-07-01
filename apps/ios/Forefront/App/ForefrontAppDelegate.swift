@@ -1,5 +1,8 @@
 #if canImport(UIKit)
 import UIKit
+import ForefrontModels
+import ForefrontNetworking
+import ForefrontQueue
 
 /// AppDelegate handles APNs registration + silent push delivery.
 public final class ForefrontAppDelegate: NSObject, UIApplicationDelegate {

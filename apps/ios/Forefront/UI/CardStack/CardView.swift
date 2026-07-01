@@ -1,5 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import ForefrontModels
 
 /// A single card: WebView body + title overlay + offline-aware loading state.
 public struct CardView: View {

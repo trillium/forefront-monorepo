@@ -1,4 +1,5 @@
 import Foundation
+import ForefrontModels
 
 /// On-disk Codable cache of the most recent `CardStack`. Lives in
 /// `Application Support/forefront/stack.json`. Not backed up to iCloud.
@@ -38,8 +39,9 @@ public final class CacheStore: Sendable {
 
     public func saveStack(_ stack: CardStack) throws {
         let data = try encoder.encode(stack)
-        // ISC-46: atomic write.
-        try data.write(to: fileURL, options: [.atomic])
+        // ISC-46: atomic write. Spell out the option type — `[.atomic]` alone
+        // cannot infer its element type in this context.
+        try data.write(to: fileURL, options: Data.WritingOptions.atomic)
     }
 
     public func clear() throws {

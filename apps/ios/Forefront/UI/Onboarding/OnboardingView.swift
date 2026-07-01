@@ -1,5 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import ForefrontModels
 #if canImport(UIKit)
 import UIKit
 #endif

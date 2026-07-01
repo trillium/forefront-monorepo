@@ -1,5 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import ForefrontQueue
 
 /// Decides onboarding-vs-deck based on Keychain token presence.
 public struct AppRoot: View {

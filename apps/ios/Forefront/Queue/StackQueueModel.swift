@@ -1,6 +1,6 @@
-#if canImport(SwiftUI)
 import Foundation
 import Observation
+import ForefrontModels
 
 /// The queue model is the heart of the §5 behavior rules.
 ///
@@ -85,4 +85,3 @@ public final class StackQueueModel {
         queue.sort { $0.priority < $1.priority }
     }
 }
-#endif

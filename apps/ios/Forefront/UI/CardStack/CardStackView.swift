@@ -1,5 +1,7 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import ForefrontModels
+import ForefrontQueue
 
 /// The swipeable deck. ZStack of cards with `zIndex` decreasing from front to back.
 /// A horizontal drag past the threshold advances to the next card.

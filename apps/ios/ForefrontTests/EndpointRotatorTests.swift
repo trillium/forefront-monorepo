@@ -53,18 +53,29 @@ final class EndpointRotatorTests: XCTestCase {
             URL(string: "https://primary")!,
             URL(string: "https://fallback")!
         ])
-        var fallbackTried = false
+        // The rotator's `attempt` closure is `@Sendable`, so a captured `var`
+        // cannot be mutated inside it under strict concurrency. An actor box
+        // provides safe cross-isolation mutation.
+        let fallbackTried = FlagBox()
         do {
             _ = try await rotator.withFallback { url in
                 if url.host == "primary" { throw ForefrontNetworkError.unauthorized }
-                fallbackTried = true
+                await fallbackTried.set()
                 return ""
             }
             XCTFail("Expected throw")
         } catch ForefrontNetworkError.unauthorized {
-            XCTAssertFalse(fallbackTried, "401 must short-circuit the rotator")
+            let tried = await fallbackTried.value
+            XCTAssertFalse(tried, "401 must short-circuit the rotator")
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
+}
+
+/// Actor-isolated boolean flag for safe mutation from within a `@Sendable`
+/// closure under strict concurrency checking.
+private actor FlagBox {
+    private(set) var value = false
+    func set() { value = true }
 }

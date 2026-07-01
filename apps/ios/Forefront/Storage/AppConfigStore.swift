@@ -1,8 +1,16 @@
 import Foundation
+import ForefrontModels
 
 /// Persists non-secret onboarding config: endpoint list, QR payload version,
 /// push topic. The secret bearer token lives in `KeychainStore`, NOT here.
-public final class AppConfigStore: Sendable {
+///
+/// `@unchecked Sendable`: the only stored mutable-reference property is
+/// `UserDefaults`, which is documented as thread-safe — concurrent reads and
+/// writes from any thread are safe by Apple's contract (it is backed by a
+/// synchronized `CFPreferences` store). All other stored properties are
+/// immutable `let` value types. There is no unsynchronized mutable state, so
+/// crossing isolation boundaries with this instance is safe.
+public final class AppConfigStore: @unchecked Sendable {
     private let defaults: UserDefaults
     private let endpointsKey = "forefront.endpoints"
     private let versionKey = "forefront.qrPayloadVersion"

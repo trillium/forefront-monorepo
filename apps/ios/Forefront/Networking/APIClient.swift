@@ -1,4 +1,5 @@
 import Foundation
+import ForefrontModels
 
 /// Thin URLSession wrapper. Knows how to call `/stack/last-updated` and `/stack`
 /// with a Bearer token, decode the response, and surface typed errors.

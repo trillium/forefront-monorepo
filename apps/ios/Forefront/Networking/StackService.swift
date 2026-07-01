@@ -1,4 +1,6 @@
 import Foundation
+import ForefrontModels
+import ForefrontStorage
 
 public enum RefreshOutcome: Sendable {
     case unchanged
