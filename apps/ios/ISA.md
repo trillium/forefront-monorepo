@@ -3,8 +3,8 @@ project: forefront
 task: forefront-iteration-2-compile-fix-and-feature-plan
 slug: forefront
 effort: E4
-phase: build
-progress: 124/168
+phase: execute
+progress: 143/168
 mode: build
 started: 2026-06-30
 updated: 2026-07-01
@@ -67,214 +67,214 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 
 ### Domain A — Project layout & build (D1: scaffold)
 
-- [ ] ISC-1: `~/code/forefront/` exists and is a git repository (`Read .git/HEAD`)
-- [ ] ISC-2: `Package.swift` exists at repo root and declares the package name `Forefront` (`Read Package.swift`)
-- [ ] ISC-3: `Package.swift` declares Swift tools version ≥ 5.9 (`Grep "swift-tools-version" Package.swift`)
-- [ ] ISC-4: `Package.swift` declares iOS 17 as platform deployment target (`Grep ".iOS(.v17)" Package.swift`)
-- [ ] ISC-5: Source directory `Forefront/` exists with subfolders `App/`, `Models/`, `Networking/`, `Storage/`, `UI/CardStack/`, `UI/Onboarding/`, `UI/WebView/`, `Util/`, `Resources/` (`Bash find`)
-- [ ] ISC-6: Tests directory `ForefrontTests/` exists (`Bash test -d`)
-- [ ] ISC-7: Docs directory `Docs/` exists and contains `BACKEND_CONTRACT.md`, `BUILD_PLAN.md`, `DECISIONS.md` (`Bash test`)
-- [ ] ISC-8: `.gitignore` excludes `.build/`, `.swiftpm/`, `DerivedData/`, `*.xcuserstate`, `xcuserdata/` (`Grep`)
-- [ ] ISC-9: `README.md` at repo root names the project, summarizes architecture, and lists the "open in Xcode" steps (`Read README.md`)
-- [ ] ISC-10: `ISA.md` (this file) lives at repo root and has all twelve required sections (`Grep`)
-- [ ] ISC-11: Initial git commit landed on `main` (`Bash git log --oneline`)
-- [ ] ISC-12: Anti: no `node_modules/`, `package.json`, or `bun.lockb` files anywhere in the repo (`Bash find`)
+- [x] ISC-1: `~/code/forefront/` exists and is a git repository (`Read .git/HEAD`)
+- [x] ISC-2: `Package.swift` exists at repo root and declares the package name `Forefront` (`Read Package.swift`)
+- [x] ISC-3: `Package.swift` declares Swift tools version ≥ 5.9 (`Grep "swift-tools-version" Package.swift`)
+- [x] ISC-4: `Package.swift` declares iOS 17 as platform deployment target (`Grep ".iOS(.v17)" Package.swift`)
+- [x] ISC-5: Source directory `Forefront/` exists with subfolders `App/`, `Models/`, `Networking/`, `Storage/`, `UI/CardStack/`, `UI/Onboarding/`, `UI/WebView/`, `Util/`, `Resources/` (`Bash find`)
+- [x] ISC-6: Tests directory `ForefrontTests/` exists (`Bash test -d`)
+- [x] ISC-7: Docs directory `Docs/` exists and contains `BACKEND_CONTRACT.md`, `BUILD_PLAN.md`, `DECISIONS.md` (`Bash test`)
+- [x] ISC-8: `.gitignore` excludes `.build/`, `.swiftpm/`, `DerivedData/`, `*.xcuserstate`, `xcuserdata/` (`Grep`)
+- [x] ISC-9: `README.md` at repo root names the project, summarizes architecture, and lists the "open in Xcode" steps (`Read README.md`)
+- [x] ISC-10: `ISA.md` (this file) lives at repo root and has all twelve required sections (`Grep`)
+- [x] ISC-11: Initial git commit landed on `main` (`Bash git log --oneline`)
+- [x] ISC-12: Anti: no `node_modules/`, `package.json`, or `bun.lockb` files anywhere in the repo (`Bash find`)
 
 ### Domain B — Models (D2: typed contracts)
 
-- [ ] ISC-13: `Models/Card.swift` defines a `Card` struct conforming to `Codable, Identifiable, Hashable` with fields `id: String, url: URL, title: String, priority: Int, createdAt: Date, updatedAt: Date, ttl: TimeInterval?, type: CardType?` (`Grep`)
-- [ ] ISC-14: `Models/Card.swift` defines a `CardType` enum with `case web` and `case unknown` and conforms to `Codable` with an unknown-case fallback (`Grep "case unknown" Card.swift`)
-- [ ] ISC-15: `Models/CardStack.swift` defines a `CardStack` struct conforming to `Codable` with `version: StackVersion` and `cards: [Card]` (`Grep`)
-- [ ] ISC-16: `Models/StackVersion.swift` defines a `StackVersion` type that round-trips both integer and ISO-8601 string payloads via a single decoder (`Grep`)
-- [ ] ISC-17: `Models/QRPayload.swift` defines a `QRPayload` struct with `version: Int, endpoints: [URL], authToken: String, push: PushHint?` (`Grep`)
-- [ ] ISC-18: `Models/QRPayload.swift` rejects a payload whose `endpoints` is empty (decoder throws) (`Grep "endpoints.isEmpty"`)
-- [ ] ISC-19: `Models/QRPayload.swift` rejects a payload whose `authToken` is the empty string (`Grep "authToken.isEmpty"`)
-- [ ] ISC-20: `Models/Endpoint.swift` defines an `Endpoint` value type wrapping a `URL` and a numeric priority (rotator position) (`Grep`)
-- [ ] ISC-21: Anti: no model conforms to `NSObject` or inherits from a UIKit class (`Bash grep -RE "NSObject|UIKit"`)
-- [ ] ISC-22: Anti: no model leaks `authToken` into its `CustomStringConvertible` / `description` (`Grep`)
+- [x] ISC-13: `Models/Card.swift` defines a `Card` struct conforming to `Codable, Identifiable, Hashable` with fields `id: String, url: URL, title: String, priority: Int, createdAt: Date, updatedAt: Date, ttl: TimeInterval?, type: CardType?` (`Grep`)
+- [x] ISC-14: `Models/Card.swift` defines a `CardType` enum with `case web` and `case unknown` and conforms to `Codable` with an unknown-case fallback (`Grep "case unknown" Card.swift`)
+- [x] ISC-15: `Models/CardStack.swift` defines a `CardStack` struct conforming to `Codable` with `version: StackVersion` and `cards: [Card]` (`Grep`)
+- [x] ISC-16: `Models/StackVersion.swift` defines a `StackVersion` type that round-trips both integer and ISO-8601 string payloads via a single decoder (`Grep`)
+- [x] ISC-17: `Models/QRPayload.swift` defines a `QRPayload` struct with `version: Int, endpoints: [URL], authToken: String, push: PushHint?` (`Grep`)
+- [x] ISC-18: `Models/QRPayload.swift` rejects a payload whose `endpoints` is empty (decoder throws) (`Grep "endpoints.isEmpty"`)
+- [x] ISC-19: `Models/QRPayload.swift` rejects a payload whose `authToken` is the empty string (`Grep "authToken.isEmpty"`)
+- [x] ISC-20: `Models/Endpoint.swift` defines an `Endpoint` value type wrapping a `URL` and a numeric priority (rotator position) (`Grep`)
+- [x] ISC-21: Anti: no model conforms to `NSObject` or inherits from a UIKit class (`Bash grep -RE "NSObject|UIKit"`)
+- [x] ISC-22: Anti: no model leaks `authToken` into its `CustomStringConvertible` / `description` (`Grep`)
 
 ### Domain C — Networking (D3: API client + endpoint rotation)
 
-- [ ] ISC-23: `Networking/APIClient.swift` exposes `func lastUpdated() async throws -> StackVersion` (`Grep`)
-- [ ] ISC-24: `Networking/APIClient.swift` exposes `func fetchStack() async throws -> CardStack` (`Grep`)
-- [ ] ISC-25: Every outbound request carries `Authorization: Bearer <token>` (`Grep "Bearer"`)
-- [ ] ISC-26: `Networking/EndpointRotator.swift` iterates the configured `endpoints` array in order on each call (`Grep`)
-- [ ] ISC-27: Rotator persists the index of the last endpoint that succeeded for the session (`Grep "lastSuccessIndex"`)
-- [ ] ISC-28: Rotator stops iterating and rethrows once every endpoint has failed within one fetch attempt (`Grep`)
-- [ ] ISC-29: Network errors are surfaced as a typed `ForefrontNetworkError` enum, not generic `Error` (`Grep "enum ForefrontNetworkError"`)
-- [ ] ISC-30: HTTP 401 from `/stack/last-updated` or `/stack` raises `ForefrontNetworkError.unauthorized` (`Grep "case unauthorized"`)
+- [x] ISC-23: `Networking/APIClient.swift` exposes `func lastUpdated() async throws -> StackVersion` (`Grep`)
+- [x] ISC-24: `Networking/APIClient.swift` exposes `func fetchStack() async throws -> CardStack` (`Grep`)
+- [x] ISC-25: Every outbound request carries `Authorization: Bearer <token>` (`Grep "Bearer"`)
+- [x] ISC-26: `Networking/EndpointRotator.swift` iterates the configured `endpoints` array in order on each call (`Grep`)
+- [x] ISC-27: Rotator persists the index of the last endpoint that succeeded for the session (`Grep "lastSuccessIndex"`)
+- [x] ISC-28: Rotator stops iterating and rethrows once every endpoint has failed within one fetch attempt (`Grep`)
+- [x] ISC-29: Network errors are surfaced as a typed `ForefrontNetworkError` enum, not generic `Error` (`Grep "enum ForefrontNetworkError"`)
+- [x] ISC-30: HTTP 401 from `/stack/last-updated` or `/stack` raises `ForefrontNetworkError.unauthorized` (`Grep "case unauthorized"`)
 - [ ] ISC-31: HTTP 5xx is retried at most once per endpoint before falling through to the next (`Grep`)
-- [ ] ISC-32: Anti: no network call runs on the main thread (every public API is `async` and the URLSession config sets `.default`) (`Grep`)
-- [ ] ISC-33: Anti: the API client does not log the bearer token nor write it to file via `print` / `os_log` substitution (`Grep "authToken"`)
-- [ ] ISC-34: `Networking/StackService.swift` orchestrates `lastUpdated()` → compare to cached version → conditionally call `fetchStack()` (`Grep`)
-- [ ] ISC-35: `StackService` exposes `func refresh() async -> RefreshOutcome` returning `.unchanged | .updated(CardStack) | .offline(cached: CardStack)` (`Grep`)
-- [ ] ISC-36: `StackService.refresh()` does NOT throw — failure paths degrade to `.offline(cached:)` (`Grep "throws" StackService.swift`)
-- [ ] ISC-37: A unit test in `ForefrontTests/` decodes a sample `CardStack` JSON fixture (`Read`)
-- [ ] ISC-38: A unit test in `ForefrontTests/` decodes a sample `QRPayload` JSON fixture (`Read`)
+- [x] ISC-32: Anti: no network call runs on the main thread (every public API is `async` and the URLSession config sets `.default`) (`Grep`)
+- [x] ISC-33: Anti: the API client does not log the bearer token nor write it to file via `print` / `os_log` substitution (`Grep "authToken"`)
+- [x] ISC-34: `Networking/StackService.swift` orchestrates `lastUpdated()` → compare to cached version → conditionally call `fetchStack()` (`Grep`)
+- [x] ISC-35: `StackService` exposes `func refresh() async -> RefreshOutcome` returning `.unchanged | .updated(CardStack) | .offline(cached: CardStack)` (`Grep`)
+- [x] ISC-36: `StackService.refresh()` does NOT throw — failure paths degrade to `.offline(cached:)` (`Grep "throws" StackService.swift`)
+- [x] ISC-37: A unit test in `ForefrontTests/` decodes a sample `CardStack` JSON fixture (`Read`)
+- [x] ISC-38: A unit test in `ForefrontTests/` decodes a sample `QRPayload` JSON fixture (`Read`)
 
 ### Domain D — Storage (D4: Keychain + on-disk cache)
 
-- [ ] ISC-39: `Storage/KeychainStore.swift` defines `func storeToken(_ token: String) throws` and `func loadToken() throws -> String?` (`Grep`)
-- [ ] ISC-40: Keychain access uses `kSecAttrAccessibleAfterFirstUnlock` (`Grep "kSecAttrAccessibleAfterFirstUnlock"`)
-- [ ] ISC-41: KeychainStore namespaces its service to `com.trilliumsmith.forefront` (`Grep`)
-- [ ] ISC-42: Anti: the bearer token is never written to `UserDefaults` (`Bash grep -R "UserDefaults" Forefront/ | grep -i token` returns nothing)
-- [ ] ISC-43: `Storage/CacheStore.swift` exposes `func loadStack() throws -> CardStack?` and `func saveStack(_ stack: CardStack) throws` (`Grep`)
-- [ ] ISC-44: CacheStore writes to `Application Support/forefront/stack.json` via `FileManager` (`Grep "Application Support"`)
-- [ ] ISC-45: CacheStore creates the directory if missing (`Grep "createDirectory"`)
-- [ ] ISC-46: CacheStore writes atomically (`Data.WritingOptions.atomic` or `replaceItemAt`) (`Grep`)
-- [ ] ISC-47: CacheStore evicts a card whose `ttl + updatedAt` is in the past on load (`Grep "ttl"`)
-- [ ] ISC-48: `Storage/AppConfigStore.swift` persists the ordered `endpoints` list and the QR `version` (`Grep`)
-- [ ] ISC-49: AppConfigStore is the only writer of the endpoint list outside of QR re-scan flow (`Grep`)
-- [ ] ISC-50: Anti: nothing in `Storage/` writes to `Documents/` (so iCloud sync cannot pick up the cache) (`Bash grep`)
+- [x] ISC-39: `Storage/KeychainStore.swift` defines `func storeToken(_ token: String) throws` and `func loadToken() throws -> String?` (`Grep`)
+- [x] ISC-40: Keychain access uses `kSecAttrAccessibleAfterFirstUnlock` (`Grep "kSecAttrAccessibleAfterFirstUnlock"`)
+- [x] ISC-41: KeychainStore namespaces its service to `com.trilliumsmith.forefront` (`Grep`)
+- [x] ISC-42: Anti: the bearer token is never written to `UserDefaults` (`Bash grep -R "UserDefaults" Forefront/ | grep -i token` returns nothing)
+- [x] ISC-43: `Storage/CacheStore.swift` exposes `func loadStack() throws -> CardStack?` and `func saveStack(_ stack: CardStack) throws` (`Grep`)
+- [x] ISC-44: CacheStore writes to `Application Support/forefront/stack.json` via `FileManager` (`Grep "Application Support"`)
+- [x] ISC-45: CacheStore creates the directory if missing (`Grep "createDirectory"`)
+- [x] ISC-46: CacheStore writes atomically (`Data.WritingOptions.atomic` or `replaceItemAt`) (`Grep`)
+- [x] ISC-47: CacheStore evicts a card whose `ttl + updatedAt` is in the past on load (`Grep "ttl"`)
+- [x] ISC-48: `Storage/AppConfigStore.swift` persists the ordered `endpoints` list and the QR `version` (`Grep`)
+- [x] ISC-49: AppConfigStore is the only writer of the endpoint list outside of QR re-scan flow (`Grep`)
+- [x] ISC-50: Anti: nothing in `Storage/` writes to `Documents/` (so iCloud sync cannot pick up the cache) (`Bash grep`)
 
 ### Domain E — Card-stack UI & queue semantics (D5: swipeable deck)
 
-- [ ] ISC-51: `UI/CardStack/CardStackView.swift` is a SwiftUI `View` taking a `StackQueueModel` as an `@Bindable` input (`Grep`)
-- [ ] ISC-52: The deck renders cards in a `ZStack` with `zIndex` decreasing from front to back (`Grep "zIndex"`)
+- [x] ISC-51: `UI/CardStack/CardStackView.swift` is a SwiftUI `View` taking a `StackQueueModel` as an `@Bindable` input (`Grep`)
+- [x] ISC-52: The deck renders cards in a `ZStack` with `zIndex` decreasing from front to back (`Grep "zIndex"`)
 - [ ] ISC-53: A horizontal `DragGesture` advances to the next card when the drag exceeds a screen-fraction threshold (`Grep "DragGesture"`)
-- [ ] ISC-54: The active card never re-renders mid-drag from an external state change (`Grep "transaction"` or equivalent gate)
-- [ ] ISC-55: `UI/CardStack/StackQueueModel.swift` declares `@Observable` and owns `active: Card?`, `queue: [Card]` (`Grep "@Observable"`)
-- [ ] ISC-56: `StackQueueModel.advance()` pops the next card off `queue` and assigns it to `active` (`Grep "func advance"`)
-- [ ] ISC-57: `StackQueueModel.merge(stack:)` replaces the queue without mutating `active` (`Grep "func merge"`)
-- [ ] ISC-58: `StackQueueModel.flush(replacement:)` sets `queue` to the new stack but leaves `active` until next swipe (`Grep "func flush"`)
-- [ ] ISC-59: `StackQueueModel.prependUrgent(_:)` inserts a card at queue index 0 without affecting `active` (`Grep "func prependUrgent"`)
+- [x] ISC-54: The active card never re-renders mid-drag from an external state change (`Grep "transaction"` or equivalent gate)
+- [x] ISC-55: `UI/CardStack/StackQueueModel.swift` declares `@Observable` and owns `active: Card?`, `queue: [Card]` (`Grep "@Observable"`)
+- [x] ISC-56: `StackQueueModel.advance()` pops the next card off `queue` and assigns it to `active` (`Grep "func advance"`)
+- [x] ISC-57: `StackQueueModel.merge(stack:)` replaces the queue without mutating `active` (`Grep "func merge"`)
+- [x] ISC-58: `StackQueueModel.flush(replacement:)` sets `queue` to the new stack but leaves `active` until next swipe (`Grep "func flush"`)
+- [x] ISC-59: `StackQueueModel.prependUrgent(_:)` inserts a card at queue index 0 without affecting `active` (`Grep "func prependUrgent"`)
 - [ ] ISC-60: A card with a higher `priority` (lower numeric value) arriving via fetch is promoted to queue index 0 (`Grep`)
-- [ ] ISC-61: Queue mutations happen on `@MainActor` (`Grep "@MainActor"`)
-- [ ] ISC-62: Anti: a fetch-side reorder cannot replace the `active` reference (`Grep`)
-- [ ] ISC-63: Anti: dropping a stack to length zero does not crash — `active` becomes nil only after the user swipes (`Grep`)
-- [ ] ISC-64: `UI/CardStack/CardView.swift` hosts a single `WebCardView` and a title overlay (`Grep`)
+- [x] ISC-61: Queue mutations happen on `@MainActor` (`Grep "@MainActor"`)
+- [x] ISC-62: Anti: a fetch-side reorder cannot replace the `active` reference (`Grep`)
+- [x] ISC-63: Anti: dropping a stack to length zero does not crash — `active` becomes nil only after the user swipes (`Grep`)
+- [x] ISC-64: `UI/CardStack/CardView.swift` hosts a single `WebCardView` and a title overlay (`Grep`)
 - [ ] ISC-65: Cards in the queue (not active) preload at most the next 1 card's web content (`Grep`)
-- [ ] ISC-66: A unit test in `ForefrontTests/` verifies `StackQueueModel.advance()` decrements `queue.count` (`Read`)
+- [x] ISC-66: A unit test in `ForefrontTests/` verifies `StackQueueModel.advance()` decrements `queue.count` (`Read`)
 
 ### Domain F — WebView integration (D6: WKWebView wrapper)
 
-- [ ] ISC-67: `UI/WebView/WebCardView.swift` exposes a SwiftUI view taking a `URL` input (`Grep`)
-- [ ] ISC-68: `UI/WebView/WebViewRepresentable.swift` conforms to `UIViewRepresentable` and creates a `WKWebView` (`Grep`)
-- [ ] ISC-69: Each card gets its own isolated `WKWebsiteDataStore` (`Grep "nonPersistent\|websiteDataStore"`)
-- [ ] ISC-70: Anti: card WebViews do NOT share cookies across cards by default (`Grep`)
+- [x] ISC-67: `UI/WebView/WebCardView.swift` exposes a SwiftUI view taking a `URL` input (`Grep`)
+- [x] ISC-68: `UI/WebView/WebViewRepresentable.swift` conforms to `UIViewRepresentable` and creates a `WKWebView` (`Grep`)
+- [x] ISC-69: Each card gets its own isolated `WKWebsiteDataStore` (`Grep "nonPersistent\|websiteDataStore"`)
+- [x] ISC-70: Anti: card WebViews do NOT share cookies across cards by default (`Grep`)
 - [ ] ISC-71: WebView surfaces a "host unreachable" overlay when navigation fails with `NSURLErrorCannotConnectToHost` or `NSURLErrorTimedOut` (`Grep`)
-- [ ] ISC-72: WebView passes the Bearer token as `Authorization` header on the initial request (so card pages can validate the user) (`Grep`)
-- [ ] ISC-73: Anti: WebView does not enable arbitrary file URL access (`Grep "allowFileAccessFromFileURLs"` returns nothing or `false`)
-- [ ] ISC-74: Anti: WebView does not expose any `WKScriptMessageHandler` to the page (no JS → native bridge in v1) (`Grep`)
+- [x] ISC-72: WebView passes the Bearer token as `Authorization` header on the initial request (so card pages can validate the user) (`Grep`)
+- [x] ISC-73: Anti: WebView does not enable arbitrary file URL access (`Grep "allowFileAccessFromFileURLs"` returns nothing or `false`)
+- [x] ISC-74: Anti: WebView does not expose any `WKScriptMessageHandler` to the page (no JS → native bridge in v1) (`Grep`)
 
 ### Domain G — QR onboarding (D2 cont. + D7: onboarding flow)
 
-- [ ] ISC-75: `UI/Onboarding/QRScanView.swift` is a SwiftUI view that wraps `QRScannerController` (`Grep`)
-- [ ] ISC-76: `UI/Onboarding/QRScannerController.swift` uses `AVCaptureMetadataOutput` with `.qr` type (`Grep ".qr"`)
-- [ ] ISC-77: Scanner halts capture on first successful decode (`Grep "stopRunning"`)
-- [ ] ISC-78: A decoded payload is parsed via `QRPayload(json:)` and validation errors surface inline (`Grep`)
-- [ ] ISC-79: On valid payload, token is written to Keychain and endpoints + version are written to AppConfigStore in one transaction (`Grep`)
-- [ ] ISC-80: `UI/Onboarding/OnboardingView.swift` controls the scan → store → ready hand-off (`Grep`)
-- [ ] ISC-81: A re-scan flow exists from the settings screen and overwrites existing token + endpoints (`Grep "rescan"`)
-- [ ] ISC-82: Camera permission is requested with an `NSCameraUsageDescription` in `Info.plist` (`Grep "NSCameraUsageDescription"`)
-- [ ] ISC-83: Anti: a denied camera permission does not crash — the view shows a settings deep-link (`Grep`)
-- [ ] ISC-84: Anti: scanning the same QR twice does not double-write (idempotent) (`Grep`)
+- [x] ISC-75: `UI/Onboarding/QRScanView.swift` is a SwiftUI view that wraps `QRScannerController` (`Grep`)
+- [x] ISC-76: `UI/Onboarding/QRScannerController.swift` uses `AVCaptureMetadataOutput` with `.qr` type (`Grep ".qr"`)
+- [x] ISC-77: Scanner halts capture on first successful decode (`Grep "stopRunning"`)
+- [x] ISC-78: A decoded payload is parsed via `QRPayload(json:)` and validation errors surface inline (`Grep`)
+- [x] ISC-79: On valid payload, token is written to Keychain and endpoints + version are written to AppConfigStore in one transaction (`Grep`)
+- [x] ISC-80: `UI/Onboarding/OnboardingView.swift` controls the scan → store → ready hand-off (`Grep`)
+- [x] ISC-81: A re-scan flow exists from the settings screen and overwrites existing token + endpoints (`Grep "rescan"`)
+- [x] ISC-82: Camera permission is requested with an `NSCameraUsageDescription` in `Info.plist` (`Grep "NSCameraUsageDescription"`)
+- [x] ISC-83: Anti: a denied camera permission does not crash — the view shows a settings deep-link (`Grep`)
+- [x] ISC-84: Anti: scanning the same QR twice does not double-write (idempotent) (`Grep`)
 
 ### Domain H — Push notifications & background refresh (D8: silent push)
 
-- [ ] ISC-85: `Networking/PushRegistrar.swift` exposes `func register() async` that calls `UIApplication.shared.registerForRemoteNotifications()` (`Grep`)
-- [ ] ISC-86: `App/ForefrontAppDelegate.swift` implements `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` (`Grep`)
+- [x] ISC-85: `Networking/PushRegistrar.swift` exposes `func register() async` that calls `UIApplication.shared.registerForRemoteNotifications()` (`Grep`)
+- [x] ISC-86: `App/ForefrontAppDelegate.swift` implements `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` (`Grep`)
 - [ ] ISC-87: Silent push handler invokes `StackService.refresh()` and completes within iOS's 30s background budget (`Grep`)
-- [ ] ISC-88: Silent push handler never blocks UI thread (`Grep "@MainActor"` only where required)
-- [ ] ISC-89: `Info.plist` declares `UIBackgroundModes` array containing `remote-notification` (`Grep`)
+- [x] ISC-88: Silent push handler never blocks UI thread (`Grep "@MainActor"` only where required)
+- [x] ISC-89: `Info.plist` declares `UIBackgroundModes` array containing `remote-notification` (`Grep`)
 - [ ] ISC-90: APNs device token is forwarded to the backend on the configured `/push/register` (or equivalent) endpoint — endpoint name TBD by backend contract; placeholder in code (`Grep "registerDeviceToken"`)
-- [ ] ISC-91: Anti: launch-time poll runs unconditionally even if the most recent silent push said "no change" (i.e. push is best-effort, launch poll is authoritative) (`Grep`)
-- [ ] ISC-92: Anti: push handler never surfaces a visible alert / banner (`alert: 0, badge: 0` semantics) (`Grep`)
+- [x] ISC-91: Anti: launch-time poll runs unconditionally even if the most recent silent push said "no change" (i.e. push is best-effort, launch poll is authoritative) (`Grep`)
+- [x] ISC-92: Anti: push handler never surfaces a visible alert / banner (`alert: 0, badge: 0` semantics) (`Grep`)
 
 ### Domain I — Offline & resilience (D4 cont. + behavior rules §5)
 
-- [ ] ISC-93: On launch, if `lastUpdated()` throws, app renders `CacheStore.loadStack()` and shows an offline indicator (`Grep`)
-- [ ] ISC-94: Offline indicator is a SwiftUI `View` in the deck overlay layer (`Grep "OfflineBanner\|offlineIndicator"`)
-- [ ] ISC-95: An empty cache + offline state shows a "first run needs server" empty-state, not a crash (`Grep`)
+- [x] ISC-93: On launch, if `lastUpdated()` throws, app renders `CacheStore.loadStack()` and shows an offline indicator (`Grep`)
+- [x] ISC-94: Offline indicator is a SwiftUI `View` in the deck overlay layer (`Grep "OfflineBanner\|offlineIndicator"`)
+- [x] ISC-95: An empty cache + offline state shows a "first run needs server" empty-state, not a crash (`Grep`)
 - [ ] ISC-96: A successful `fetchStack()` clears the offline indicator and writes cache before mutating the queue (`Grep`)
-- [ ] ISC-97: Anti: the offline indicator does NOT block input — user can still swipe through the cached deck (`Grep`)
-- [ ] ISC-98: Anti: the app never auto-retries a failed fetch more often than every 30 seconds while in foreground (`Grep`)
-- [ ] ISC-99: Anti: a server returning a `version` equal to the cached version causes ZERO writes to disk (`Grep`)
-- [ ] ISC-100: Anti: a flush (stack with `cards: []`) is honored — queue clears, active stays until swipe (`Grep`)
+- [x] ISC-97: Anti: the offline indicator does NOT block input — user can still swipe through the cached deck (`Grep`)
+- [x] ISC-98: Anti: the app never auto-retries a failed fetch more often than every 30 seconds while in foreground (`Grep`)
+- [x] ISC-99: Anti: a server returning a `version` equal to the cached version causes ZERO writes to disk (`Grep`)
+- [x] ISC-100: Anti: a flush (stack with `cards: []`) is honored — queue clears, active stays until swipe (`Grep`)
 
 ### Domain J — App entry, environment, settings (D9: assembled app)
 
-- [ ] ISC-101: `App/ForefrontApp.swift` is the `@main` entry point with `WindowGroup { AppRoot() }` (`Grep "@main"`)
-- [ ] ISC-102: `App/AppEnvironment.swift` constructs and shares `StackService`, `StackQueueModel`, `KeychainStore`, `CacheStore`, `AppConfigStore`, `PushRegistrar` via `@Environment` (`Grep`)
-- [ ] ISC-103: `App/AppRoot.swift` decides onboarding-vs-deck based on `KeychainStore.loadToken() != nil` (`Grep`)
-- [ ] ISC-104: A minimal Settings view exposes "rescan QR" and "clear cache" actions (`Grep "SettingsView"`)
-- [ ] ISC-105: Anti: there is no "logout" button that wipes the Keychain without confirmation (`Grep`)
+- [x] ISC-101: `App/ForefrontApp.swift` is the `@main` entry point with `WindowGroup { AppRoot() }` (`Grep "@main"`)
+- [x] ISC-102: `App/AppEnvironment.swift` constructs and shares `StackService`, `StackQueueModel`, `KeychainStore`, `CacheStore`, `AppConfigStore`, `PushRegistrar` via `@Environment` (`Grep`)
+- [x] ISC-103: `App/AppRoot.swift` decides onboarding-vs-deck based on `KeychainStore.loadToken() != nil` (`Grep`)
+- [x] ISC-104: A minimal Settings view exposes "rescan QR" and "clear cache" actions (`Grep "SettingsView"`)
+- [x] ISC-105: Anti: there is no "logout" button that wipes the Keychain without confirmation (`Grep`)
 
 ### Domain K — Distribution & App Store readiness (D10: dual-distribution gate)
 
-- [ ] ISC-106: `Info.plist` template exists at `Forefront/Resources/Info.plist` with bundle identifier `com.trilliumsmith.forefront` and `CFBundleDisplayName` "Forefront" (`Grep`)
-- [ ] ISC-107: `Forefront/Resources/Forefront.entitlements` declares `aps-environment` `development` (`Grep`)
-- [ ] ISC-108: README lists the App Store 4.2 narrative (QR onboarding, native deck, offline cache, swipe semantics, silent push) (`Read`)
-- [ ] ISC-109: Anti: no use of private SPI / `_` -prefixed symbols (`Bash grep -E "private SPI|@_silgen_name"` returns nothing)
-- [ ] ISC-110: Anti: no use of `UIWebView` (deprecated, banned by App Review) (`Bash grep "UIWebView"` returns nothing)
-- [ ] ISC-111: `Docs/BACKEND_CONTRACT.md` documents the QR payload schema, `/stack/last-updated`, `/stack`, and silent-push payload exactly as §4 of the spec describes (`Read`)
-- [ ] ISC-112: `Docs/BUILD_PLAN.md` lists the eight milestones from §8 in order with file mappings (`Read`)
-- [ ] ISC-113: `Docs/DECISIONS.md` records: min-iOS=17, WKWebView path, no card-stack library, isolated cookie jar per card, no UserDefaults for token, AVFoundation (not VisionKit) for QR (`Read`)
+- [x] ISC-106: `Info.plist` template exists at `Forefront/Resources/Info.plist` with bundle identifier `com.trilliumsmith.forefront` and `CFBundleDisplayName` "Forefront" (`Grep`)
+- [x] ISC-107: `Forefront/Resources/Forefront.entitlements` declares `aps-environment` `development` (`Grep`)
+- [x] ISC-108: README lists the App Store 4.2 narrative (QR onboarding, native deck, offline cache, swipe semantics, silent push) (`Read`)
+- [x] ISC-109: Anti: no use of private SPI / `_` -prefixed symbols (`Bash grep -E "private SPI|@_silgen_name"` returns nothing)
+- [x] ISC-110: Anti: no use of `UIWebView` (deprecated, banned by App Review) (`Bash grep "UIWebView"` returns nothing)
+- [x] ISC-111: `Docs/BACKEND_CONTRACT.md` documents the QR payload schema, `/stack/last-updated`, `/stack`, and silent-push payload exactly as §4 of the spec describes (`Read`)
+- [x] ISC-112: `Docs/BUILD_PLAN.md` lists the eight milestones from §8 in order with file mappings (`Read`)
+- [x] ISC-113: `Docs/DECISIONS.md` records: min-iOS=17, WKWebView path, no card-stack library, isolated cookie jar per card, no UserDefaults for token, AVFoundation (not VisionKit) for QR (`Read`)
 
 ### Domain L — Tests & verification (D11)
 
-- [ ] ISC-114: `ForefrontTests/ModelsTests.swift` exists and contains a `Card` round-trip test (`Read`)
-- [ ] ISC-115: `ForefrontTests/StackQueueModelTests.swift` exists and covers `advance`, `merge`, `flush`, `prependUrgent` (`Read`)
-- [ ] ISC-116: `ForefrontTests/EndpointRotatorTests.swift` exercises primary-success, primary-fail-fallback-success, all-fail (`Read`)
-- [ ] ISC-117: `ForefrontTests/CacheStoreTests.swift` round-trips a `CardStack` through disk (`Read`)
-- [ ] ISC-118: A `ForefrontTests/Fixtures/` directory contains sample `stack.json` and `qr_payload.json` (`Bash test`)
+- [x] ISC-114: `ForefrontTests/ModelsTests.swift` exists and contains a `Card` round-trip test (`Read`)
+- [x] ISC-115: `ForefrontTests/StackQueueModelTests.swift` exists and covers `advance`, `merge`, `flush`, `prependUrgent` (`Read`)
+- [x] ISC-116: `ForefrontTests/EndpointRotatorTests.swift` exercises primary-success, primary-fail-fallback-success, all-fail (`Read`)
+- [x] ISC-117: `ForefrontTests/CacheStoreTests.swift` round-trips a `CardStack` through disk (`Read`)
+- [x] ISC-118: A `ForefrontTests/Fixtures/` directory contains sample `stack.json` and `qr_payload.json` (`Bash test`)
 
 ### Domain M — Anti-criteria (regression prevention)
 
-- [ ] ISC-119: Anti: no `import SwiftUI` inside `Models/` (models are UI-agnostic) (`Bash grep -R "import SwiftUI" Forefront/Models/` returns nothing)
-- [ ] ISC-120: Anti: no `print(` calls in production source (only `os.Logger`) (`Bash grep -R "print(" Forefront/ --include="*.swift" | grep -v Tests` returns nothing)
-- [ ] ISC-121: Anti: no `fatalError(` in non-test code outside the `@main` boot path (`Bash grep`)
-- [ ] ISC-122: Anti: no `// TODO` left unanchored — every TODO must reference an ISC id (`Bash grep "TODO" Forefront/ -R | grep -vE "ISC-[0-9]+"` returns nothing)
-- [ ] ISC-123: Anti: no `force-unwrap` of an `Optional` returned from Keychain (`Bash grep "loadToken()!"` returns nothing)
-- [ ] ISC-124: Anti: no `DispatchQueue.main.async` — UI hops go via `@MainActor` (`Bash grep "DispatchQueue.main"` returns nothing in non-test code)
-- [ ] ISC-125: Anti: no synchronous `URLSession.shared.data(for:)` call without `try await` (`Bash grep`)
-- [ ] ISC-126: Anti: no `if #available(iOS 18, *)` branch silently skipping behavior on iOS 17 (`Bash grep "if #available(iOS 18"` either returns nothing or has both branches implemented)
-- [ ] ISC-127: Antecedent: the device is connected to the Tailscale tailnet that hosts the endpoints — documented as a user prerequisite in README (`Grep "Tailscale" README.md`)
+- [x] ISC-119: Anti: no `import SwiftUI` inside `Models/` (models are UI-agnostic) (`Bash grep -R "import SwiftUI" Forefront/Models/` returns nothing)
+- [x] ISC-120: Anti: no `print(` calls in production source (only `os.Logger`) (`Bash grep -R "print(" Forefront/ --include="*.swift" | grep -v Tests` returns nothing)
+- [x] ISC-121: Anti: no `fatalError(` in non-test code outside the `@main` boot path (`Bash grep`)
+- [x] ISC-122: Anti: no `// TODO` left unanchored — every TODO must reference an ISC id (`Bash grep "TODO" Forefront/ -R | grep -vE "ISC-[0-9]+"` returns nothing)
+- [x] ISC-123: Anti: no `force-unwrap` of an `Optional` returned from Keychain (`Bash grep "loadToken()!"` returns nothing)
+- [x] ISC-124: Anti: no `DispatchQueue.main.async` — UI hops go via `@MainActor` (`Bash grep "DispatchQueue.main"` returns nothing in non-test code)
+- [x] ISC-125: Anti: no synchronous `URLSession.shared.data(for:)` call without `try await` (`Bash grep`)
+- [x] ISC-126: Anti: no `if #available(iOS 18, *)` branch silently skipping behavior on iOS 17 (`Bash grep "if #available(iOS 18"` either returns nothing or has both branches implemented)
+- [x] ISC-127: Antecedent: the device is connected to the Tailscale tailnet that hosts the endpoints — documented as a user prerequisite in README (`Grep "Tailscale" README.md`)
 
 ### Domain N — Process & lifecycle
 
-- [ ] ISC-128: Repo has at least one commit per shipped milestone (no "single mega-commit") (`Bash git log`)
-- [ ] ISC-129: Each commit message names the milestone (M1..M8) and a one-line summary (`Bash git log --oneline`)
-- [ ] ISC-130: A `CHANGELOG.md` at repo root logs the scaffold drop and what landed (`Read`)
-- [ ] ISC-131: `Docs/BUILD_PLAN.md` marks milestones M1–M2 as DONE for this scaffold drop, M3–M8 as TODO with the per-milestone file list (`Grep "DONE\|TODO"`)
-- [ ] ISC-132: Anti: the scaffold does NOT contain any `xcuserdata/` or `*.xcuserstate` artifacts (they are gitignored) (`Bash find`)
+- [x] ISC-128: Repo has at least one commit per shipped milestone (no "single mega-commit") (`Bash git log`)
+- [x] ISC-129: Each commit message names the milestone (M1..M8) and a one-line summary (`Bash git log --oneline`)
+- [x] ISC-130: A `CHANGELOG.md` at repo root logs the scaffold drop and what landed (`Read`)
+- [x] ISC-131: `Docs/BUILD_PLAN.md` marks milestones M1–M2 as DONE for this scaffold drop, M3–M8 as TODO with the per-milestone file list (`Grep "DONE\|TODO"`)
+- [x] ISC-132: Anti: the scaffold does NOT contain any `xcuserdata/` or `*.xcuserstate` artifacts (they are gitignored) (`Bash find`)
 
 ### Domain O — Iteration 2: Build health (F1)
 
 > Root cause recorded 2026-07-01: the scaffold's 124 "passed" ISCs were grep-probes; the first real `swift test` failed to compile. Compile health is now a first-class criterion.
 
-- [ ] ISC-133: `swift test` compiles and all tests pass with exit code 0 (`Bash swift test`)
-- [ ] ISC-134: `Package.swift` gives the Storage target an explicit dependency on the Models target (`Grep Package.swift`)
-- [ ] ISC-135: `swift build` emits zero warnings (`Bash swift build 2>&1 | grep -c warning` returns 0)
-- [ ] ISC-136: `Scripts/check-ui-compile.sh` exists and type-checks the UI + App layer against the iOS simulator SDK, exiting 0 (`Bash Scripts/check-ui-compile.sh`)
-- [ ] ISC-137: Anti: no `@unchecked Sendable` lands without an adjacent comment stating the concrete thread-safety argument (`Bash grep -B2 "@unchecked Sendable"`)
+- [x] ISC-133: `swift test` compiles and all tests pass with exit code 0 (`Bash swift test`)
+- [x] ISC-134: `Package.swift` gives the Storage target an explicit dependency on the Models target (`Grep Package.swift`)
+- [x] ISC-135: `swift build` emits zero warnings (`Bash swift build 2>&1 | grep -c warning` returns 0)
+- [x] ISC-136: `Scripts/check-ui-compile.sh` exists and type-checks the UI + App layer against the iOS simulator SDK, exiting 0 (`Bash Scripts/check-ui-compile.sh`)
+- [x] ISC-137: Anti: no `@unchecked Sendable` lands without an adjacent comment stating the concrete thread-safety argument (`Bash grep -B2 "@unchecked Sendable"`)
 
 ### Domain P — Iteration 2: Refresh single-flight coalescing (F2)
 
 > Structural prerequisite (causal-loop analysis 2026-07-01): launch task, pull-to-refresh, silent push, onboarding, and any future trigger can race `refresh()`; equality-only `StackVersion` means out-of-order `adopt()` cannot be version-guarded — the fix is loop structure, not ordering.
 
-- [ ] ISC-138: `StackService.refresh()` is single-flight — concurrent callers await one shared in-flight task (`Grep "inFlight" StackService.swift`)
-- [ ] ISC-139: A unit test proves two concurrent `refresh()` calls produce exactly one `/stack/last-updated` probe (`Read ForefrontTests/StackServiceTests.swift`)
-- [ ] ISC-140: Auto-triggered refreshes (foreground, push) enforce a ≥30s minimum interval via a `lastAttemptAt` guard; explicit user refresh bypasses it (`Grep "lastAttemptAt"`)
-- [ ] ISC-141: Anti: one coalesced refresh outcome produces at most one `adopt()` call (`Read` test asserting adopt-count)
+- [x] ISC-138: `StackService.refresh()` is single-flight — concurrent callers await one shared in-flight task (`Grep "inFlight" StackService.swift`)
+- [x] ISC-139: A unit test proves two concurrent `refresh()` calls produce exactly one `/stack/last-updated` probe (`Read ForefrontTests/StackServiceTests.swift`)
+- [x] ISC-140: Auto-triggered refreshes (foreground, push) enforce a ≥30s minimum interval via a `lastAttemptAt` guard; explicit user refresh bypasses it (`Grep "lastAttemptAt"`)
+- [x] ISC-141: Anti: one coalesced refresh outcome produces at most one `adopt()` call (`Read` test asserting adopt-count)
 
 ### Domain Q — Iteration 2: Mock-network test harness (F3)
 
 > Converts formerly device-only DEFERRED-VERIFY ISCs (31, 60, 96, 99) into deterministic unit tests via a URLProtocol stub.
 
-- [ ] ISC-142: `ForefrontTests/MockURLProtocol.swift` exists and intercepts URLSession requests with scriptable per-request responses (`Read`)
-- [ ] ISC-143: Test: HTTP 5xx from the primary endpoint retries once, then falls through to the next endpoint (converts ISC-31) (`Read`)
-- [ ] ISC-144: Test: HTTP 401 short-circuits rotation and surfaces `.unauthorized` without trying remaining endpoints (`Read`)
-- [ ] ISC-145: Test: refresh returning an unchanged version performs zero cache writes (converts ISC-99) (`Read`)
-- [ ] ISC-146: Test: a successful fetch writes cache before the queue adopts the new stack (converts ISC-96) (`Read`)
-- [ ] ISC-147: Test: a higher-priority card arriving via merge sorts to queue index 0 (converts ISC-60) (`Read`)
+- [x] ISC-142: `ForefrontTests/MockURLProtocol.swift` exists and intercepts URLSession requests with scriptable per-request responses (`Read`)
+- [x] ISC-143: Test: HTTP 5xx from the primary endpoint retries once, then falls through to the next endpoint (converts ISC-31) (`Read`)
+- [x] ISC-144: Test: HTTP 401 short-circuits rotation and surfaces `.unauthorized` without trying remaining endpoints (`Read`)
+- [x] ISC-145: Test: refresh returning an unchanged version performs zero cache writes (converts ISC-99) (`Read`)
+- [x] ISC-146: Test: a successful fetch writes cache before the queue adopts the new stack (converts ISC-96) (`Read`)
+- [x] ISC-147: Test: a higher-priority card arriving via merge sorts to queue index 0 (converts ISC-60) (`Read`)
 
 ### Domain R — Iteration 2: Foreground refresh + token-rotation UX (F4, F5)
 
-- [ ] ISC-148: A `scenePhase` transition to `.active` triggers a throttled `refresh()` (`Grep "scenePhase"`)
-- [ ] ISC-149: A `.unauthorized` refresh outcome surfaces a visible re-scan prompt, not a silent offline state (`Grep "unauthorized" UI layer`)
-- [ ] ISC-150: The re-scan prompt routes into the existing rescan flow and preserves the cached deck on disk (`Grep`)
-- [ ] ISC-151: Anti: no foreground refresh path can replace `active` — merge semantics only (`Read` test)
+- [x] ISC-148: A `scenePhase` transition to `.active` triggers a throttled `refresh()` (`Grep "scenePhase"`)
+- [x] ISC-149: A `.unauthorized` refresh outcome surfaces a visible re-scan prompt, not a silent offline state (`Grep "unauthorized" UI layer`)
+- [x] ISC-150: The re-scan prompt routes into the existing rescan flow and preserves the cached deck on disk (`Grep`)
+- [x] ISC-151: Anti: no foreground refresh path can replace `active` — merge semantics only (`Read` test)
 
 ### Domain S — Iteration 2: Deck UX pack (F8)
 
@@ -531,6 +531,21 @@ ISC-131: `Grep "DONE\|TODO" Docs/BUILD_PLAN.md` — M1..M7 DONE; M8 PARTIAL; rea
 ISC-132: `Bash find . -name xcuserdata -o -name "*.xcuserstate"` — no matches.
 
 **Coverage:** 124/132 passed (all grep- and read-verifiable ISCs); 8 `[DEFERRED-VERIFY]`: ISC-31, 53, 60, 65, 71, 87, 90, 96 — each requires running the app in Xcode on simulator or device with a live backend. Follow-up task tracked in BUILD_PLAN.md "Post-scaffold work".
+
+### Iteration 2 verification (2026-07-01)
+
+ISC-133: `Bash swift test` — Executed 33 tests, 0 failures, exit 0 (independently re-run by primary after Forge's report).
+ISC-134: `Grep Package.swift` — Storage target declares ForefrontModels dependency (real root cause was missing `import` statements in sources, not the manifest — see Changelog).
+ISC-135: `Bash swift build 2>&1 | grep -c warning` — 0.
+ISC-136: `Bash Scripts/check-ui-compile.sh` — exit 0; type-checks UI+App sources against the arm64-apple-ios17.0-simulator SDK.
+ISC-137: `Grep "@unchecked Sendable"` — both sites carry adjacent thread-safety comments.
+ISC-138..141: `Read StackService.swift` (actor, `inFlight` coalescing, `lastAttemptAt` throttle) + `StackServiceTests.swift` — probe-count==1 under concurrent refresh; throttle, bypass, and single-adopt tests green.
+ISC-142..147: `Read MockURLProtocol.swift` + `MockNetworkTests.swift` — 5xx retry-once fallback (hits==3), 401 short-circuit (hits==1), unchanged-version zero writes (saveCount==0), cache-before-adopt ordering, priority-to-front merge. Converts former DEFERRED-VERIFY ISC-31/60/96/99-runtime to deterministic unit tests.
+ISC-148: `Grep scenePhase AppRoot.swift` — `.onChange` → `performRefresh(trigger: .automatic)` on `.active`.
+ISC-149..150: `Grep ReauthBanner AppRoot.swift` + `test401PreservesCachedDeck` — visible re-scan prompt routes into the existing OnboardingView rescan flow; cached deck preserved on 401.
+ISC-151: `Read StackQueueModelTests.testForegroundAdoptNeverReplacesActive` — adopt preserves held active across merge, flush, and empty-stack cases.
+
+Commits: `dab2d55` (F1), `5c57b09` (F2), `d61bfd4` (F3), `f22542d` (F4), `027e5d9` (F5).
 
 **Doctrine compliance:**
 - Rule 1 (Live probe for user-facing): every grep/read-verifiable user-facing ISC has tool evidence above. Runtime UI ISCs tagged `[DEFERRED-VERIFY]` per the probe-impossible escape clause.
