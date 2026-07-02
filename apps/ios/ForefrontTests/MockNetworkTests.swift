@@ -88,6 +88,28 @@ final class MockNetworkTests: XCTestCase {
         }
     }
 
+    // MARK: - ISC-150: a 401 preserves the cached deck (no cache clear)
+
+    func test401PreservesCachedDeck() async throws {
+        let seeded = CardStack(
+            version: StackVersion(integer: 3),
+            cards: [Card(id: "cached", url: URL(string: "https://x/c")!, title: "C", priority: 0,
+                         createdAt: Date(timeIntervalSince1970: 0), updatedAt: Date(timeIntervalSince1970: 0))]
+        )
+        let spy = SpyCache(seed: seeded)
+        MockURLProtocol.script(path: lastUpdatedPath, responses: [.status(401)])
+        let client = makeClient(endpoints: twoEndpoints)
+        let service = StackService(api: client, cache: spy, tokenStore: KeychainStore())
+
+        let outcome = await service.refresh(trigger: .userInitiated)
+        XCTAssertEqual(outcome, .unauthorized, "401 must surface .unauthorized, not silent .offline")
+        // The cached deck on disk is untouched — StackService writes only on
+        // .updated and holds `any StackCaching`, which has no clear() to call.
+        XCTAssertEqual(spy.saveCount, 0, "a 401 must not write the cache")
+        let stillCached = try spy.loadStack(now: Date())
+        XCTAssertEqual(stillCached?.cards.first?.id, "cached", "the cached deck must survive a 401")
+    }
+
     // MARK: - ISC-145: unchanged version => zero cache writes
 
     func testUnchangedVersionWritesNothing() async throws {

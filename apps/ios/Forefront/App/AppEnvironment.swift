@@ -63,6 +63,12 @@ public final class AppEnvironment {
         bearerToken = (try? keychain.loadToken()) ?? nil
     }
 
+    /// F5: dismiss the 401 re-scan prompt after a successful re-onboard. Does not
+    /// touch the on-disk cache — the deck stays intact (ISC-150).
+    public func clearReauth() {
+        needsReauth = false
+    }
+
     /// Run the refresh path: poll last-updated, fetch if changed, fall through to
     /// cache on failure. `trigger` governs the 30s automatic throttle inside the
     /// service — `.userInitiated` (pull-to-refresh) bypasses it; `.automatic`

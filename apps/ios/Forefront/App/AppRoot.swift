@@ -48,11 +48,14 @@ public struct AppRoot: View {
 public struct DeckScreen: View {
     @Environment(\.forefrontEnvironment) private var env
     @State private var showingSettings = false
+    @State private var showingReauth = false
 
     public init() {}
 
     public var body: some View {
         ZStack(alignment: .topTrailing) {
+            // The cached deck stays rendered and swipeable behind every overlay,
+            // including the re-scan prompt (ISC-150).
             CardStackView(model: env.queue)
                 .ignoresSafeArea(edges: .horizontal)
 
@@ -66,6 +69,12 @@ public struct DeckScreen: View {
                     }
                     .padding()
                 }
+                // F5: a 401 surfaces a VISIBLE re-scan prompt instead of a silent
+                // offline state (ISC-149). It routes into the existing rescan
+                // flow (OnboardingView) and preserves the cached deck (ISC-150).
+                if env.needsReauth {
+                    ReauthBanner(onRescan: { showingReauth = true })
+                }
                 Spacer()
                 if env.isOffline {
                     OfflineBanner()
@@ -75,9 +84,51 @@ public struct DeckScreen: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .refreshable {
-            await env.performRefresh()
+        .sheet(isPresented: $showingReauth) {
+            // The existing rescan flow: scan a fresh QR, write the new token +
+            // endpoints, rebuild networking, refresh. On success the 401 state
+            // clears. The on-disk cache is never touched here.
+            OnboardingView(onComplete: {
+                showingReauth = false
+                env.clearReauth()
+                env.rebuildNetworking()
+                Task { await env.performRefresh(trigger: .userInitiated) }
+            })
         }
+        .refreshable {
+            // Pull-to-refresh is user-initiated — bypasses the 30s throttle.
+            await env.performRefresh(trigger: .userInitiated)
+        }
+    }
+}
+
+/// F5: shown on the deck when a refresh returns `.unauthorized`. Visible, not
+/// silent. Only its button intercepts touches — the deck behind it stays
+/// swipeable (ISC-150).
+public struct ReauthBanner: View {
+    public let onRescan: () -> Void
+    public init(onRescan: @escaping () -> Void) { self.onRescan = onRescan }
+
+    public var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.trianglebadge.exclamationmark")
+                Text("Session expired — rescan the QR from your server")
+                    .font(.footnote)
+                    .multilineTextAlignment(.leading)
+            }
+            Button(action: onRescan) {
+                Label("Rescan QR", systemImage: "qrcode.viewfinder")
+                    .font(.footnote.weight(.semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal)
+        .padding(.top, 4)
     }
 }
 
