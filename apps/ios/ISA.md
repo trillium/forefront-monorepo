@@ -3,8 +3,8 @@ project: forefront
 task: forefront-iteration-2-compile-fix-and-feature-plan
 slug: forefront
 effort: E4
-phase: verify
-progress: 149/168
+phase: complete
+progress: 148/169
 mode: build
 started: 2026-06-30
 updated: 2026-07-01
@@ -63,7 +63,7 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 
 ## Criteria
 
-> ISC count: 168 (132 from the scaffold drop + 36 added in iteration 2, 2026-07-01). Tier floor E4 = 128 (met). All anti-criteria and antecedents are interleaved by domain. Each ISC is a single binary tool probe.
+> ISC count: 169 (132 scaffold + 36 added iteration 2 + ISC-151.1 split from Cato audit, 2026-07-01). Tier floor E4 = 128 (met). All anti-criteria and antecedents are interleaved by domain. Each ISC is a single binary tool probe.
 
 ### Domain A — Project layout & build (D1: scaffold)
 
@@ -266,7 +266,7 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 - [x] ISC-143: Test: HTTP 5xx from the primary endpoint retries once, then falls through to the next endpoint (converts ISC-31) (`Read`)
 - [x] ISC-144: Test: HTTP 401 short-circuits rotation and surfaces `.unauthorized` without trying remaining endpoints (`Read`)
 - [x] ISC-145: Test: refresh returning an unchanged version performs zero cache writes (converts ISC-99) (`Read`)
-- [x] ISC-146: Test: a successful fetch writes cache before the queue adopts the new stack (converts ISC-96) (`Read`)
+- [DEFERRED-VERIFY] ISC-146: Test: a successful fetch writes cache before the queue adopts the new stack (converts ISC-96) — Cato M1: current test is tautological (proves its own call sequence, not the StackService→AppEnvironment production path); follow-up: forefront-isc146-integration-test (`Read`)
 - [x] ISC-147: Test: a higher-priority card arriving via merge sorts to queue index 0 (converts ISC-60) (`Read`)
 
 ### Domain R — Iteration 2: Foreground refresh + token-rotation UX (F4, F5)
@@ -274,7 +274,8 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 - [x] ISC-148: A `scenePhase` transition to `.active` triggers a throttled `refresh()` (`Grep "scenePhase"`)
 - [x] ISC-149: A `.unauthorized` refresh outcome surfaces a visible re-scan prompt, not a silent offline state (`Grep "unauthorized" UI layer`)
 - [x] ISC-150: The re-scan prompt routes into the existing rescan flow and preserves the cached deck on disk (`Grep`)
-- [x] ISC-151: Anti: no foreground refresh path can replace `active` — merge semantics only (`Read` test)
+- [x] ISC-151: Anti: no foreground refresh path can replace `active` — merge semantics only, proven for quiescent adopt (`Read` test)
+- [ ] ISC-151.1: A unit test interleaves `queue.adopt()` between swipe-commit and the 250ms deferred `advance()` and proves the incoming active is neither lost nor duplicated (Cato M3 temporal race) (`Read` test)
 
 ### Domain S — Iteration 2: Deck UX pack (F8)
 
@@ -377,6 +378,7 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 - **2026-07-01 — Invariant restated for undo.** "Active card is sacred" becomes "user gestures own `active`; system events own the queue." Undo (a user gesture) then conforms. Undo history is version-scoped: any `adopt()` with a new version clears it; restore dedupes by id. Keeps last-write-wins intact; undo never touches cache or version cursor.
 - **2026-07-01 — Demo mode is a composition-root swap, not conditionals.** App Review cannot join the tailnet — a reviewer would see a dead app (distribution blocker, previously unrecorded). Fix: `StackRefreshing` protocol seam injected at `AppEnvironment`, `DemoStackService` over a bundled fixture, flag in `AppConfigStore`, push registration gated. Demo short-circuits `refresh()` rather than surviving its failure, so no offline-banner leak and no cache contamination.
 - **2026-07-01 — Iteration-2 prioritization.** P0: F1 compile health, F2 coalescer (foundation). P1: F3 mock-network harness (converts 4 DEFERRED-VERIFY ISCs to unit tests), F4 foreground refresh, F5 401 re-scan UX. P2: F8 deck UX pack now; F6 undo + F7 demo mode recorded with full ISCs for the next build slot. F9 futures recorded without ISCs. Rationale: foundation → safety → daily-feel; demo mode blocks only submission, not daily use.
+- **2026-07-01 — Cato audit applied (iteration 2 VERIFY).** Verdict `concerns` (0 critical / 3 major / 5 minor). Accepted in full: ISC-146 un-checked to DEFERRED-VERIFY (tautological test), ISC-151.1 split for the 250ms deferred-advance × adopt race, throttle wall-clock/skew test gap + SpyCache eviction-blindness + mtime-semantics fragility + undo coordination cost (seenThisGeneration now couples position, haptics, and future history) queued for the F6/F7 build slot. Note for that slot: Cato m4 says F8's generation counter raised undo's coordination cost — implement ISC-158's history stock and the counter decrement together.
 - **2026-07-01 — refined: refresh state machine owned by one agent (Advisor).** Advisor flagged that coalescer, 30s throttle, foreground trigger, and 401 handling all touch one refresh path and race each other if split across agents. Forge-1 scope widened to F1–F5; Forge-2 narrowed to F8 (pure UI). Hard handoff gate: Forge-1 must end committed + `swift test` green.
 - **2026-07-01 — EnterPlanMode skipped (show-your-math).** The user pre-approved execution in the request ("you may launch sub agents to fulfill those needs after you have recorded them"), so presenting a plan and stopping would contradict the explicit instruction.
 - **2026-06-30 — Cato audit unfinished (DOCTRINE MISS, surfaced).** E4 mandates a Cato cross-vendor audit before `phase: complete`. The agent returned `agentId: acc59683079b2429c` with five tool uses but no structured verdict, and SendMessage to continue it isn't available in this environment. Scaffold ships without the audit gate satisfied. Follow-up: re-run `Agent(subagent_type="Cato", ...)` in an environment where SendMessage is available, or include the audit prompt in the first iteration session.
@@ -394,6 +396,12 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
   - **refuted_by:** First-draft `CardStackView.swift` used `DispatchQueue.main.asyncAfter` for the post-swipe advance delay — a familiar idiom that Swift Concurrency replaces with `Task { @MainActor in try? await Task.sleep(…) }`. The audit pass caught it; commit `a84ac2b` fixes it.
   - **learned:** Anti-criteria do not enforce themselves at write-time. Hold the audit step as a required gate even on apparently-clean scaffolds. The grep audit is cheap; the false-confidence "I followed the rules" is what catches you out.
   - **criterion_now:** ISC-124 stays. Add post-write audit pass to every coding milestone (already in BUILD_PLAN.md "Build hygiene").
+
+- **2026-07-01 — Conjecture / refutation / learning (grep-verification is not verification).**
+  - **conjectured:** A source tree whose every ISC passes its grep/Read probe is a correct scaffold; compile verification can safely defer to the first Xcode open.
+  - **refuted_by:** The first-ever `swift test` failed on multiple files, and `StackQueueModelTests` had never compiled at all — silently gated behind `#if canImport(SwiftUI)`, true on macOS, referencing a symbol outside the SwiftPM targets. 124 "passed" ISCs coexisted with a package that did not build.
+  - **learned:** Grep probes verify text, not semantics. Any project with a compiler must have "the compiler accepts it" as ISC #0 of every milestone, and every layer needs *some* compile path (hence `Scripts/check-ui-compile.sh` for the non-SwiftPM UI layer). Corollary from Cato M1: the same trap recurs one level up — a green test only counts if it exercises the production call path, not its own scaffolding.
+  - **criterion_now:** ISC-133 (`swift test` green) and ISC-136 (UI type-check) gate every future commit; ISC-146 demoted to DEFERRED-VERIFY until a non-tautological integration test exists.
 
 ## Verification
 
@@ -554,6 +562,12 @@ ISC-155: `Grep CardStackView.swift` — `.sensoryFeedback(.impact(weight: .light
 ISC-156: `Read StackQueueModelTests.testMergeGrowsDeckCountWhileActivePreserved` — `deckTotal` grows, `active` id preserved; count is @Observable-derived.
 ISC-157: `Bash grep -c "allowsHitTesting(false)"` — 6 sites across CardStackView/CardView (DeckPositionIndicator, MastheadView, OfflineBanner, title overlay); only functional buttons take touch.
 F8 gates re-run by primary: `swift test` 45/45, `check-ui-compile.sh` exit 0, warnings 0, tree clean. Commits: `3fa16ea`, `021c51d`, `0b15603`, `bccfeef`, `bd43a62`.
+
+**Iteration 2 doctrine compliance (2026-07-01):**
+- Rule 1 (Live probe): all iteration-2 ISCs verified by primary re-running `swift test` / `check-ui-compile.sh` / greps independently of Forge reports. On-device behaviors (haptic buzz, render position) follow the existing DEFERRED-VERIFY policy.
+- Rule 2 (Advisor): fired at the PLAN→BUILD boundary; produced a real scope change (refresh state machine consolidated into Forge-1).
+- Rule 2a (Cato): **satisfied this iteration** — verdict `concerns`, 0 critical, 3 major (M1 tautological ISC-146 ordering test; M2 throttle proven on injected time only; M3 unmodeled 250ms deferred-advance race), 5 minor. Disposition: ISC-146 downgraded to `[DEFERRED-VERIFY]` with follow-up `forefront-isc146-integration-test`; ISC-151.1 split out for the M3 interleaved-adopt test; M2/m1–m5 recorded here and in Decisions for the next build slot. Cato independently confirmed: actor coalescer sound, MainActor discipline clean, no token leaks, rotator 401/5xx logic correctly and non-tautologically tested.
+- Rule 3 (Conflict): no empirical contradiction — Cato findings accepted and applied.
 
 **Doctrine compliance:**
 - Rule 1 (Live probe for user-facing): every grep/read-verifiable user-facing ISC has tool evidence above. Runtime UI ISCs tagged `[DEFERRED-VERIFY]` per the probe-impossible escape clause.
