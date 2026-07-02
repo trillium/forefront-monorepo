@@ -38,6 +38,9 @@ public struct CardView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 36)
+        // ISC-157: the title pill is a decorative overlay over the web content —
+        // it must never intercept a tap/scroll destined for the page beneath it.
+        .allowsHitTesting(false)
     }
 }
 
