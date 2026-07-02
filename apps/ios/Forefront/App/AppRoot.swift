@@ -60,7 +60,11 @@ public struct DeckScreen: View {
                 .ignoresSafeArea(edges: .horizontal)
 
             VStack {
-                HStack {
+                HStack(alignment: .top) {
+                    // ISC-153: masthead — day-part greeting + live remaining count
+                    // above the deck. Count is the queue's remainingCount so it
+                    // ticks as cards are swiped or arrive (ISC-156).
+                    MastheadView(cardCount: env.queue.remainingCount)
                     Spacer()
                     Button { showingSettings = true } label: {
                         Image(systemName: "gear")

@@ -113,6 +113,44 @@ struct DeckPositionIndicator: View {
     }
 }
 
+/// ISC-153: the masthead above the deck — a day-part greeting plus the live
+/// remaining-card count, e.g. "Tuesday morning — 6 cards".
+///
+/// Day-part and weekday come from `Masthead` (pure logic in the Queue target);
+/// the count is the deck's remaining count so it ticks live as cards are swiped
+/// or arrive. Decorative header — never intercepts touches (ISC-157).
+public struct MastheadView: View {
+    let cardCount: Int
+    /// Injectable for previews / tests; defaults to now.
+    var date: Date = Date()
+
+    public init(cardCount: Int, date: Date = Date()) {
+        self.cardCount = cardCount
+        self.date = date
+    }
+
+    private var masthead: Masthead {
+        Masthead(date: date, cardCount: cardCount)
+    }
+
+    public var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(masthead.greeting)
+                    .font(.title2.weight(.semibold))
+                Text(masthead.cardCountText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+        // ISC-157: decorative header — does not intercept touches.
+        .allowsHitTesting(false)
+    }
+}
+
 struct EmptyDeckView: View {
     var body: some View {
         VStack(spacing: 12) {
