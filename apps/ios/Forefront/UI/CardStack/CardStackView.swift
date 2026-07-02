@@ -30,6 +30,16 @@ public struct CardStackView: View {
                 // Active card on top.
                 if let active = model.active {
                     CardView(card: active)
+                        .overlay(alignment: .bottom) {
+                            // ISC-152: "N of M" over the active card. Derived from
+                            // the model's generation counter (deckPosition) and
+                            // the live deck size (deckTotal). Purely decorative —
+                            // never intercepts touch on the web content (ISC-157).
+                            DeckPositionIndicator(
+                                position: model.deckPosition,
+                                total: model.deckTotal
+                            )
+                        }
                         .offset(x: dragOffset.width)
                         .rotationEffect(.degrees(Double(dragOffset.width) / 30))
                         .zIndex(Double(peekDepth + 1))
@@ -73,6 +83,33 @@ public struct CardStackView: View {
             .offset(y: 12 * CGFloat(depth))
             .zIndex(Double(peekDepth - depth))
             .allowsHitTesting(false)
+    }
+}
+
+/// ISC-152: the "N of M" deck-position pill shown over the active card. Hidden
+/// when there is no active card (`position == 0`) or a degenerate total. Styled
+/// to match OfflineBanner / titleOverlay (thin material, capsule, footnote).
+///
+/// ISC-157: decorative only — `.allowsHitTesting(false)` so it can never
+/// intercept a tap or drag destined for the web content beneath it.
+struct DeckPositionIndicator: View {
+    let position: Int
+    let total: Int
+
+    var body: some View {
+        Group {
+            if position > 0 && total > 0 {
+                Text("\(position) of \(total)")
+                    .font(.footnote.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 40)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
