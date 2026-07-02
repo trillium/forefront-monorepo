@@ -52,7 +52,7 @@ extension APIClient: StackNetworking {}
 /// adopt-worthy `.updated` per coalesced flight (ISC-141).
 public actor StackService {
     private let api: any StackNetworking
-    private let cache: CacheStore
+    private let cache: any StackCaching
     private let tokenStore: KeychainStore
 
     /// Minimum wall-clock interval between two *automatic* refresh attempts.
@@ -65,7 +65,7 @@ public actor StackService {
     /// not throttled and not merely coalesced). Drives the automatic throttle.
     private var lastAttemptAt: Date?
 
-    public init(api: any StackNetworking, cache: CacheStore, tokenStore: KeychainStore) {
+    public init(api: any StackNetworking, cache: any StackCaching, tokenStore: KeychainStore) {
         self.api = api
         self.cache = cache
         self.tokenStore = tokenStore
