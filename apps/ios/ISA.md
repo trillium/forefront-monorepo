@@ -3,8 +3,8 @@ project: forefront
 task: forefront-iteration-2-compile-fix-and-feature-plan
 slug: forefront
 effort: E4
-phase: execute
-progress: 143/168
+phase: verify
+progress: 149/168
 mode: build
 started: 2026-06-30
 updated: 2026-07-01
@@ -278,12 +278,12 @@ A buildable iOS app project at `~/code/forefront/`, organized so an iOS develope
 
 ### Domain S — Iteration 2: Deck UX pack (F8)
 
-- [ ] ISC-152: A deck position indicator renders "N of M" over the active card (`Grep "of" CardStackView/CardView`)
-- [ ] ISC-153: A masthead renders day-part greeting + card count above the deck (`Grep "Masthead"`)
-- [ ] ISC-154: When offline, a staleness line shows the last successful refresh time (`Grep "lastRefreshed"`)
-- [ ] ISC-155: Card advance fires haptic feedback (`.sensoryFeedback` or `UIImpactFeedbackGenerator`) (`Grep`)
-- [ ] ISC-156: New cards arriving in the queue tick the deck count without touching `active` (`Read` test or `Grep`)
-- [ ] ISC-157: Anti: no UX overlay intercepts hit-testing of the web content (`Grep "allowsHitTesting(false)"` on overlays)
+- [x] ISC-152: A deck position indicator renders "N of M" over the active card (`Grep "of" CardStackView/CardView`)
+- [x] ISC-153: A masthead renders day-part greeting + card count above the deck (`Grep "Masthead"`)
+- [x] ISC-154: When offline, a staleness line shows the last successful refresh time (`Grep "lastRefreshed"`)
+- [x] ISC-155: Card advance fires haptic feedback (`.sensoryFeedback` or `UIImpactFeedbackGenerator`) (`Grep`)
+- [x] ISC-156: New cards arriving in the queue tick the deck count without touching `active` (`Read` test or `Grep`)
+- [x] ISC-157: Anti: no UX overlay intercepts hit-testing of the web content (`Grep "allowsHitTesting(false)"` on overlays)
 
 ### Domain T — Iteration 2: Undo swipe (F6 — recorded, next build slot)
 
@@ -546,6 +546,14 @@ ISC-149..150: `Grep ReauthBanner AppRoot.swift` + `test401PreservesCachedDeck` �
 ISC-151: `Read StackQueueModelTests.testForegroundAdoptNeverReplacesActive` — adopt preserves held active across merge, flush, and empty-stack cases.
 
 Commits: `dab2d55` (F1), `5c57b09` (F2), `d61bfd4` (F3), `f22542d` (F4), `027e5d9` (F5).
+
+ISC-152: `Grep CardStackView.swift:108` — `Text("\(position) of \(total)")`; generation-counter tests green (fresh-load, advance, new-version reset, same-version no-rewind, exhausted).
+ISC-153: `Grep AppRoot.swift:67` — `MastheadView(cardCount: env.queue.remainingCount)`; `Masthead` pure-logic type in ForefrontQueue with locale/tz-pinned tests.
+ISC-154: `Grep CacheStore.swift` — `lastRefreshed()` on the `StackCaching` protocol (stack.json mtime); OfflineBanner renders "as of HH:mm"; nil-safe tests green.
+ISC-155: `Grep CardStackView.swift` — `.sensoryFeedback(.impact(weight: .light), trigger: model.seenThisGeneration)`; runtime buzz is device-only per existing DEFERRED-VERIFY policy, type-check + trigger-logic proven.
+ISC-156: `Read StackQueueModelTests.testMergeGrowsDeckCountWhileActivePreserved` — `deckTotal` grows, `active` id preserved; count is @Observable-derived.
+ISC-157: `Bash grep -c "allowsHitTesting(false)"` — 6 sites across CardStackView/CardView (DeckPositionIndicator, MastheadView, OfflineBanner, title overlay); only functional buttons take touch.
+F8 gates re-run by primary: `swift test` 45/45, `check-ui-compile.sh` exit 0, warnings 0, tree clean. Commits: `3fa16ea`, `021c51d`, `0b15603`, `bccfeef`, `bd43a62`.
 
 **Doctrine compliance:**
 - Rule 1 (Live probe for user-facing): every grep/read-verifiable user-facing ISC has tool evidence above. Runtime UI ISCs tagged `[DEFERRED-VERIFY]` per the probe-impossible escape clause.
