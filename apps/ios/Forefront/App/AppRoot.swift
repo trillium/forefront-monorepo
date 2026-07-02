@@ -5,6 +5,7 @@ import ForefrontQueue
 /// Decides onboarding-vs-deck based on Keychain token presence.
 public struct AppRoot: View {
     @Environment(\.forefrontEnvironment) private var env
+    @Environment(\.scenePhase) private var scenePhase
     @State private var hasToken: Bool = false
     @State private var didFirstRefresh = false
 
@@ -20,7 +21,7 @@ public struct AppRoot: View {
                     hasToken = true
                     Task {
                         env.rebuildNetworking()
-                        await env.performRefresh()
+                        await env.performRefresh(trigger: .automatic)
                     }
                 })
             }
@@ -29,8 +30,16 @@ public struct AppRoot: View {
             hasToken = (env.bearerToken?.isEmpty == false)
             if hasToken && !didFirstRefresh {
                 didFirstRefresh = true
-                await env.performRefresh()
+                await env.performRefresh(trigger: .automatic)
             }
+        }
+        // ISC-148: a scenePhase transition to .active fires a throttled refresh.
+        // .automatic means F2's 30s guard suppresses rapid re-foregrounds; the
+        // outcome routes through queue.adopt(...) — merge semantics only, so the
+        // active card is never replaced by a foreground refresh (ISC-151).
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active, hasToken else { return }
+            Task { await env.performRefresh(trigger: .automatic) }
         }
     }
 }

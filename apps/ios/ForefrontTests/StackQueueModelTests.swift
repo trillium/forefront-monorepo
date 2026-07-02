@@ -64,4 +64,36 @@ final class StackQueueModelTests: XCTestCase {
         XCTAssertEqual(model.queue.filter { $0.id == "b" }.count, 1)
         XCTAssertEqual(model.queue.first?.id, "b")
     }
+
+    // MARK: - ISC-151: no foreground refresh path can replace `active`
+
+    /// `adopt(_:)` is the single mutation the foreground refresh path
+    /// (`AppEnvironment.performRefresh(trigger:.automatic)`) calls on a `.updated`
+    /// outcome. This proves that call — for every shape of incoming stack —
+    /// preserves the held `active` card. Merge semantics only.
+    func testForegroundAdoptNeverReplacesActive() {
+        // (1) Fresh stack that DOES contain the active card.
+        let model1 = StackQueueModel(active: makeCard("held"), queue: [makeCard("q1")])
+        model1.adopt(CardStack(version: StackVersion(integer: 10), cards: [
+            makeCard("held", priority: 9),
+            makeCard("new", priority: 0)
+        ]))
+        XCTAssertEqual(model1.active?.id, "held", "adopt must not replace the active card even if it reappears in the stack")
+        XCTAssertFalse(model1.queue.contains { $0.id == "held" }, "active card must not be duplicated into the queue")
+
+        // (2) Fresh stack that does NOT contain the active card.
+        let model2 = StackQueueModel(active: makeCard("held"), queue: [makeCard("q1")])
+        model2.adopt(CardStack(version: StackVersion(integer: 11), cards: [
+            makeCard("x", priority: 0),
+            makeCard("y", priority: 1)
+        ]))
+        XCTAssertEqual(model2.active?.id, "held", "adopt of an unrelated stack must not replace active")
+        XCTAssertEqual(model2.queue.map(\.id), ["x", "y"])
+
+        // (3) A flush (empty cards) — active still stands until the user swipes.
+        let model3 = StackQueueModel(active: makeCard("held"), queue: [makeCard("q1")])
+        model3.adopt(CardStack(version: StackVersion(integer: 12), cards: []))
+        XCTAssertEqual(model3.active?.id, "held", "a flush must not replace active")
+        XCTAssertEqual(model3.queue.count, 0)
+    }
 }
