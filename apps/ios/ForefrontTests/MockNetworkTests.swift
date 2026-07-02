@@ -210,6 +210,7 @@ private final class SpyCache: StackCaching, @unchecked Sendable {
     private var stored: CardStack?
     private var _saveCount = 0
     private var _lastSaveOrder: Int?
+    private var _lastRefreshed: Date?
 
     init(seed: CardStack?) { self.stored = seed }
 
@@ -223,6 +224,12 @@ private final class SpyCache: StackCaching, @unchecked Sendable {
         stored = stack
         _saveCount += 1
         _lastSaveOrder = OrderClock.tick()
+        _lastRefreshed = Date()
+    }
+
+    func lastRefreshed() -> Date? {
+        lock.lock(); defer { lock.unlock() }
+        return _lastRefreshed
     }
 
     var saveCount: Int {

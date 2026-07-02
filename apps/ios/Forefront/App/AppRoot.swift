@@ -81,7 +81,9 @@ public struct DeckScreen: View {
                 }
                 Spacer()
                 if env.isOffline {
-                    OfflineBanner()
+                    // ISC-154: pass the last-refreshed time so the banner can show
+                    // an "as of HH:mm" staleness line.
+                    OfflineBanner(lastRefreshed: env.lastRefreshed)
                 }
             }
         }

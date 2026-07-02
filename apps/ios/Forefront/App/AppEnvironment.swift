@@ -58,6 +58,14 @@ public final class AppEnvironment {
         self.queue = StackQueueModel()
     }
 
+    /// ISC-154: the time the cached deck was last successfully refreshed, for the
+    /// offline staleness line. Sourced from the cache file mtime (survives
+    /// relaunch, no extra persisted state). `nil` before the first successful
+    /// fetch — the banner then omits the "as of …" line.
+    public var lastRefreshed: Date? {
+        cache.lastRefreshed()
+    }
+
     /// Reload the bearer token cache after onboarding writes a fresh value.
     public func refreshBearerTokenCache() {
         bearerToken = (try? keychain.loadToken()) ?? nil

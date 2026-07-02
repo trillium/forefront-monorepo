@@ -7,6 +7,9 @@ import ForefrontModels
 public protocol StackCaching: Sendable {
     func loadStack(now: Date) throws -> CardStack?
     func saveStack(_ stack: CardStack) throws
+    /// ISC-154: the wall-clock time the cached deck was last written, or nil if
+    /// no cache exists yet. Drives the offline "as of HH:mm" staleness line.
+    func lastRefreshed() -> Date?
 }
 
 public extension StackCaching {
@@ -63,6 +66,19 @@ public final class CacheStore: StackCaching, Sendable {
         // ISC-46: atomic write. Spell out the option type — `[.atomic]` alone
         // cannot infer its element type in this context.
         try data.write(to: fileURL, options: Data.WritingOptions.atomic)
+    }
+
+    /// ISC-154: last-refreshed timestamp = the cache file's modification date.
+    /// Chosen as the least-invasive persistent source — it survives app relaunch
+    /// (it's a filesystem attribute), needs no new stored field, and is updated
+    /// for free by `saveStack` on every `.updated` fetch. Semantics: "the deck you
+    /// are looking at is as-of this time" (last successful content refresh). A
+    /// `.unchanged` outcome does not rewrite the file, which is correct — the
+    /// content is unchanged, so its as-of time is unchanged too.
+    public func lastRefreshed() -> Date? {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
+        return attrs?[.modificationDate] as? Date
     }
 
     public func clear() throws {
