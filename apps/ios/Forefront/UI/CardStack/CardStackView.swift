@@ -74,6 +74,12 @@ public struct CardStackView: View {
                     EmptyDeckView()
                 }
             }
+            // ISC-155: fire haptic feedback on card advance. Uses the iOS 17
+            // SwiftUI `.sensoryFeedback` API (preferred over UIImpactFeedback-
+            // Generator). Triggered by `seenThisGeneration`, which increments
+            // exactly once per committed advance — so a merge/arrival that grows
+            // the deck does NOT buzz, only a real swipe does.
+            .sensoryFeedback(.impact(weight: .light), trigger: model.seenThisGeneration)
         }
     }
 
