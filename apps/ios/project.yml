@@ -24,6 +24,7 @@ targets:
         SWIFT_VERSION: "5.9"
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
 
   ForefrontStorage:
     type: framework
@@ -38,6 +39,7 @@ targets:
         SWIFT_VERSION: "5.9"
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
 
   ForefrontNetworking:
     type: framework
@@ -53,6 +55,7 @@ targets:
         SWIFT_VERSION: "5.9"
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
 
   ForefrontQueue:
     type: framework
@@ -67,6 +70,7 @@ targets:
         SWIFT_VERSION: "5.9"
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
 
   # ── iOS App target ────────────────────────────────────────────────────────────
 
@@ -83,10 +87,6 @@ targets:
       - target: ForefrontStorage
       - target: ForefrontNetworking
       - target: ForefrontQueue
-    entitlements:
-      path: Forefront/Resources/Forefront.entitlements
-      properties:
-        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.trilliumsmith.forefront
