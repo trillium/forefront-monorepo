@@ -2,7 +2,11 @@
 .build/
 .swiftpm/
 DerivedData/
+DerivedData-device/
 build/
+
+## Generated Xcode project (source of truth is project.yml)
+*.xcodeproj/
 
 ## Xcode user state
 *.xcuserstate

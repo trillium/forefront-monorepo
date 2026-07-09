@@ -1,0 +1,132 @@
+name: Forefront
+
+# Generated .xcodeproj is gitignored — this file is the source of truth.
+# Regenerate with: xcodegen generate (from repo root)
+
+options:
+  bundleIdPrefix: com.trilliumsmith
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+
+  # ── Library modules (mirror Package.swift; also buildable via swift test) ────
+
+  ForefrontModels:
+    type: framework
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Forefront/Models
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+
+  ForefrontStorage:
+    type: framework
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Forefront/Storage
+    dependencies:
+      - target: ForefrontModels
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+
+  ForefrontNetworking:
+    type: framework
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Forefront/Networking
+    dependencies:
+      - target: ForefrontModels
+      - target: ForefrontStorage
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+
+  ForefrontQueue:
+    type: framework
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Forefront/Queue
+    dependencies:
+      - target: ForefrontModels
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+
+  # ── iOS App target ────────────────────────────────────────────────────────────
+
+  Forefront:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Forefront/App
+      - path: Forefront/UI
+      - path: Forefront/Util
+    dependencies:
+      - target: ForefrontModels
+      - target: ForefrontStorage
+      - target: ForefrontNetworking
+      - target: ForefrontQueue
+    entitlements:
+      path: Forefront/Resources/Forefront.entitlements
+      properties:
+        aps-environment: development
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.trilliumsmith.forefront
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: Forefront/Resources/Info.plist
+
+  # ── Unit-test bundle ──────────────────────────────────────────────────────────
+
+  ForefrontTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ForefrontTests
+    dependencies:
+      - target: ForefrontModels
+      - target: ForefrontStorage
+      - target: ForefrontNetworking
+      - target: ForefrontQueue
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+
+schemes:
+  Forefront:
+    build:
+      targets:
+        Forefront: all
+        ForefrontTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - name: ForefrontTests
+          parallelizable: true
+    profile:
+      config: Release
+    archive:
+      config: Release
