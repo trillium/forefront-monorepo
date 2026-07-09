@@ -118,22 +118,52 @@ public actor StackService {
     /// The actual network sequence. Runs inside exactly one coalesced flight.
     private func performRefresh() async -> RefreshOutcome {
         let cached = (try? cache.loadStack()) ?? nil
+        EventLog.shared.info("network", "Contacting server")
         do {
             let liveVersion = try await api.lastUpdated()
             if let cached, cached.version == liveVersion {
                 // ISC-99: version equal => zero writes to disk.
+                EventLog.shared.success("network", "Server reachable, deck unchanged")
                 return .unchanged
             }
             let stack = try await api.fetchStack()
             // ISC-96: write cache BEFORE the queue adopts the new stack.
             try? cache.saveStack(stack)
+            EventLog.shared.success("network", "Fetched deck", detail: "\(stack.cards.count) cards")
             return .updated(stack)
         } catch ForefrontNetworkError.unauthorized {
             // Token revoked. Clear it; the UI routes into re-onboarding (F5).
+            EventLog.shared.warn("network", "Server rejected token (401) — re-scan needed")
             try? tokenStore.deleteToken()
             return .unauthorized
         } catch {
+            // Record WHY the connection failed — this is the detail the UI can
+            // otherwise never see (it collapses to a plain `.offline`).
+            EventLog.shared.error("network", "Could not reach server", detail: Self.describe(error))
             return .offline(cached: cached)
+        }
+    }
+
+    /// Turn a networking error into a plain-language, actionable reason. The
+    /// most common device-testing failures (ATS-blocked HTTP, refused port,
+    /// tailnet down) each get a specific hint instead of an opaque code.
+    static func describe(_ error: Error) -> String {
+        guard let urlError = error as? URLError else {
+            return error.localizedDescription
+        }
+        switch urlError.code {
+        case .appTransportSecurityRequiresSecureConnection:
+            return "App Transport Security blocked plaintext HTTP — the app needs an ATS exception for the tailnet, or the server must serve HTTPS"
+        case .cannotConnectToHost:
+            return "Connection refused — is the server running on that host:port?"
+        case .cannotFindHost:
+            return "Host not found — check the tailnet address and that Tailscale is connected"
+        case .notConnectedToInternet:
+            return "No network connection — is Tailscale connected?"
+        case .timedOut:
+            return "Timed out — server unreachable on the tailnet"
+        default:
+            return "\(urlError.code.rawValue): \(urlError.localizedDescription)"
         }
     }
 }

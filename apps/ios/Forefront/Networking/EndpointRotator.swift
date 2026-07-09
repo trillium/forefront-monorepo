@@ -12,8 +12,10 @@ public actor EndpointRotator {
         self.endpoints = endpoints
     }
 
-    public var primary: URL { endpoints[0] }
-    public var count: Int { endpoints.count }
+    // Read-only over immutable `endpoints` — safe to touch from any isolation
+    // (e.g. the @MainActor debug view), so `nonisolated`.
+    public nonisolated var primary: URL { endpoints[0] }
+    public nonisolated var count: Int { endpoints.count }
 
     /// Runs `attempt` against each endpoint starting at `lastSuccessIndex`,
     /// wrapping around. First success wins; the success index is persisted.

@@ -1,6 +1,7 @@
 #if canImport(UIKit) && canImport(AVFoundation)
 import UIKit
 import AVFoundation
+import ForefrontModels
 
 /// AVFoundation-based QR scanner (D-04 in DECISIONS.md). Halts on first
 /// successful decode (ISC-77).
@@ -42,6 +43,7 @@ public final class QRScannerController: UIViewController, AVCaptureMetadataOutpu
 
     private func configureSession() {
         guard let device = AVCaptureDevice.default(for: .video) else {
+            EventLog.shared.error("scan", "No camera available")
             onError?("No camera available")
             return
         }
@@ -49,10 +51,12 @@ public final class QRScannerController: UIViewController, AVCaptureMetadataOutpu
         do {
             input = try AVCaptureDeviceInput(device: device)
         } catch {
+            EventLog.shared.error("scan", "Camera could not be opened", detail: error.localizedDescription)
             onError?(error.localizedDescription)
             return
         }
         guard session.canAddInput(input) else {
+            EventLog.shared.error("scan", "Cannot add camera input")
             onError?("Cannot add camera input")
             return
         }
@@ -72,6 +76,7 @@ public final class QRScannerController: UIViewController, AVCaptureMetadataOutpu
         preview.frame = view.bounds
         view.layer.addSublayer(preview)
         self.previewLayer = preview
+        EventLog.shared.success("scan", "Camera ready — point at the QR code")
     }
 
     public func metadataOutput(
@@ -85,6 +90,7 @@ public final class QRScannerController: UIViewController, AVCaptureMetadataOutpu
             let string = object.stringValue
         else { return }
         // ISC-77: halt on first decode.
+        EventLog.shared.info("scan", "QR code detected in frame")
         session.stopRunning()
         onDecode?(string)
     }

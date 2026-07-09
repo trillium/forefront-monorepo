@@ -25,19 +25,6 @@ public final class AppEnvironment {
     /// prompt on the deck. The cached deck stays on disk and swipeable.
     public var needsReauth: Bool = false
 
-    /// ISC-164/165: observable demo-mode flag. Setting true switches the service to
-    /// DemoStackService and allows AppRoot to render without a token. Persisted to
-    /// AppConfigStore (UserDefaults) so the state survives relaunch.
-    public var isDemoMode: Bool = false {
-        didSet {
-            appConfig.isDemoMode = isDemoMode
-            if isDemoMode {
-                service = DemoStackService()
-            } else {
-                rebuildNetworking()
-            }
-        }
-    }
 
     public init() {
         let keychain = KeychainStore()
@@ -68,17 +55,8 @@ public final class AppEnvironment {
             tokenProvider: { [tokenStore] in (try? tokenStore.loadToken()) ?? nil }
         )
         self.api = api
-        // Set the production service before touching `isDemoMode` so `didSet` side
-        // effects never run against a half-initialized instance. `didSet` does not
-        // fire during `init`, but we initialize `service` first regardless and then
-        // overwrite it with the demo fixture service if demo mode was persisted.
         self.service = StackService(api: api, cache: cache, tokenStore: keychain)
         self.queue = StackQueueModel()
-        let demo = appConfig.isDemoMode
-        self.isDemoMode = demo
-        if demo {
-            self.service = DemoStackService()
-        }
     }
 
     /// ISC-154: the time the cached deck was last successfully refreshed, for the
@@ -109,6 +87,8 @@ public final class AppEnvironment {
     /// `queue.adopt(...)`, which merges without replacing the sacred `active`
     /// card. No branch here assigns `active` directly.
     public func performRefresh(trigger: RefreshTrigger = .automatic) async {
+        let triggerName = trigger == .userInitiated ? "user-initiated" : "automatic"
+        EventLog.shared.info("refresh", "Refresh started", detail: triggerName)
         let outcome = await service.refresh(trigger: trigger, now: Date())
         switch outcome {
         case .unchanged:
@@ -119,17 +99,21 @@ public final class AppEnvironment {
         case .updated(let stack):
             isOffline = false
             queue.adopt(stack)
+            EventLog.shared.success("refresh", "Deck updated", detail: "\(stack.cards.count) cards, showing \(queue.remainingCount)")
         case .offline(let cached):
             isOffline = true
             if let cached, queue.active == nil { queue.adopt(cached) }
+            EventLog.shared.warn("refresh", "Offline — no connection", detail: cached == nil ? "no cached deck to fall back to" : "showing cached deck")
         case .unauthorized:
             // F5: surface a guided re-scan prompt instead of a silent offline
             // state. The cached deck on disk is preserved (no cache clear).
             isOffline = false
             needsReauth = true
+            EventLog.shared.warn("refresh", "Session expired — re-scan prompted")
         case .throttled:
             // Automatic refresh suppressed by the 30s guard. Nothing to do —
             // the current deck and offline state stand.
+            EventLog.shared.info("refresh", "Refresh throttled (within 30s)")
             break
         }
     }

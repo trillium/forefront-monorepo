@@ -1,5 +1,11 @@
 # Forefront Changelog
 
+## 2026-07-09 — session 18769fc6
+
+Files: Forefront/Debug/DebugInfoView.swift, Forefront/App/AppRoot.swift, Scripts/phone, package.json, Forefront/App/AppEnvironment.swift, Forefront/UI/Onboarding/OnboardingView.swift, Forefront/App/ForefrontAppDelegate.swift, Forefront/Storage/AppConfigStore.swift
+## 2026-07-09 — session c5fa32b0
+
+Files: Forefront/Resources/Info.plist, project.yml, Scripts/install-phone.sh, .gitignore, Forefront/Resources/Forefront.entitlements, Forefront/Queue/StackQueueModel.swift, Forefront/UI/CardStack/CardStackView.swift, ForefrontTests/StackQueueModelTests.swift, Forefront/Networking/StackService.swift, Forefront/Networking/DemoStackService.swift
 ## 2026-07-01 — Iteration 2: compile-first + refresh hardening + deck UX
 
 - **The scaffold compiles for the first time.** F1 fixed missing module imports (not manifest deps — those were declared), the `.atomic` contextual-type error, and Sendable warnings; extracted `StackQueueModel` into a new `ForefrontQueue` SwiftPM target (its tests had never compiled — `#if canImport(SwiftUI)` gated them into referencing a nonexistent symbol on macOS). `swift test`: 45 green. `Scripts/check-ui-compile.sh` gives the UI/App layer an iOS-simulator type-check path.

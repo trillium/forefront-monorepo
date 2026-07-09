@@ -15,7 +15,6 @@ public final class AppConfigStore: @unchecked Sendable {
     private let endpointsKey = "forefront.endpoints"
     private let versionKey = "forefront.qrPayloadVersion"
     private let pushTopicKey = "forefront.pushTopic"
-    private let demoModeKey = "forefront.demoMode"
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -43,12 +42,6 @@ public final class AppConfigStore: @unchecked Sendable {
         set { defaults.set(newValue, forKey: pushTopicKey) }
     }
 
-    /// ISC-164: demo mode flag — stored in UserDefaults (unsigned preference), never Keychain.
-    public var isDemoMode: Bool {
-        get { defaults.bool(forKey: demoModeKey) }
-        set { defaults.set(newValue, forKey: demoModeKey) }
-    }
-
     /// Single-transaction adoption of a freshly-scanned QR payload's
     /// non-secret bits. Token write is the caller's responsibility (Keychain).
     public func adopt(_ payload: QRPayload) {
@@ -61,6 +54,5 @@ public final class AppConfigStore: @unchecked Sendable {
         defaults.removeObject(forKey: endpointsKey)
         defaults.removeObject(forKey: versionKey)
         defaults.removeObject(forKey: pushTopicKey)
-        defaults.removeObject(forKey: demoModeKey)
     }
 }
