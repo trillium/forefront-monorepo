@@ -71,7 +71,12 @@ public struct CardStackView: View {
                         )
                         .transition(.identity)
                 } else if model.queue.isEmpty {
-                    EmptyDeckView()
+                    EmptyDeckView(
+                        canReview: !model.history.isEmpty,
+                        onReview: {
+                            withAnimation(.spring(response: 0.35)) { model.restart() }
+                        }
+                    )
                 }
 
                 // ISC-158: undo button — visible when swipe history exists.
@@ -176,14 +181,27 @@ public struct MastheadView: View {
 }
 
 struct EmptyDeckView: View {
+    /// True when there are swiped cards to replay — gates the review button.
+    var canReview: Bool = false
+    /// Replays the deck from the top (StackQueueModel.restart()).
+    var onReview: () -> Void = {}
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: "rectangle.stack.badge.checkmark")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
             Text("You're all caught up.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
+            if canReview {
+                Button(action: onReview) {
+                    Label("Review previous cards", systemImage: "arrow.counterclockwise")
+                        .font(.callout.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+            }
         }
         .padding()
     }

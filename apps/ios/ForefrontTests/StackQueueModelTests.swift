@@ -32,6 +32,43 @@ final class StackQueueModelTests: XCTestCase {
         XCTAssertNil(model.active)
     }
 
+    func testRestartReplaysExhaustedDeckFromTop() {
+        let model = StackQueueModel(
+            active: makeCard("a"),
+            queue: [makeCard("b"), makeCard("c")]
+        )
+        model.advance() // a -> b
+        model.advance() // b -> c
+        model.advance() // c -> nil (exhausted)
+        XCTAssertNil(model.active)
+        XCTAssertTrue(model.queue.isEmpty)
+        XCTAssertEqual(model.history.count, 3)
+
+        model.restart()
+
+        XCTAssertEqual(model.active?.id, "a")
+        XCTAssertEqual(model.queue.map(\.id), ["b", "c"])
+        XCTAssertTrue(model.history.isEmpty)
+        XCTAssertEqual(model.deckPosition, 1)
+        XCTAssertEqual(model.deckTotal, 3)
+    }
+
+    func testRestartMidDeckRewindsToTop() {
+        let model = StackQueueModel(
+            active: makeCard("a"),
+            queue: [makeCard("b"), makeCard("c")]
+        )
+        model.advance() // a -> b (a in history, c still queued)
+
+        model.restart()
+
+        // Order preserved: swiped (a), then active (b), then queued (c).
+        XCTAssertEqual(model.active?.id, "a")
+        XCTAssertEqual(model.queue.map(\.id), ["b", "c"])
+        XCTAssertTrue(model.history.isEmpty)
+        XCTAssertEqual(model.deckPosition, 1)
+    }
+
     func testMergePreservesActive() {
         let model = StackQueueModel(active: makeCard("a"), queue: [makeCard("b")])
         let fresh = CardStack(version: StackVersion(integer: 2), cards: [

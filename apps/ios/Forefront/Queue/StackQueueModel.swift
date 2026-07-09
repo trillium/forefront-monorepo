@@ -97,6 +97,25 @@ public final class StackQueueModel {
         }
     }
 
+    /// Replay the current deck generation from the top so the user can review
+    /// cards they've already swiped past. Reconstructs the generation's original
+    /// display order — swiped cards (in swipe order), then the active card, then
+    /// whatever is still queued — and restores the first as `active`. Clears
+    /// `history` and resets the seen-counter so the deck reads "1 of M" again.
+    /// A no-op when there is nothing to review. Stays within the generation:
+    /// a version change already dropped `history` (ISC-160), so this can never
+    /// resurrect cards from a stale deck.
+    public func restart() {
+        var cards = history
+        if let current = active { cards.append(current) }
+        cards.append(contentsOf: queue)
+        guard let first = cards.first else { return }
+        history = []
+        seenThisGeneration = 0
+        active = first
+        queue = Array(cards.dropFirst())
+    }
+
     /// ISC-152: reset the seen-counter for a fresh deck generation. Called only
     /// when an incoming stack carries a version we have not already adopted, so a
     /// same-version re-merge (idempotent refresh) does not rewind the indicator.
