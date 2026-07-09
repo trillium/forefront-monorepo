@@ -18,6 +18,12 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<!-- Required for native full-screen rendering. WITHOUT a launch screen, iOS
+	     runs the app in legacy-compatibility mode at a smaller resolution and
+	     letterboxes it (black bars), so the UI never fills modern device screens.
+	     An empty dict opts into the device's native size on all hardware. -->
+	<key>UILaunchScreen</key>
+	<dict/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
