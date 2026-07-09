@@ -1,4 +1,5 @@
-import { logActivity, getVersion } from "@/lib/fixtures"
+import { getVersion } from "@/lib/deck"
+import { logActivity } from "@/lib/activity"
 import { unauthorized, validateBearer } from "@/lib/backend"
 
 // In-memory fixture state must not be statically cached.

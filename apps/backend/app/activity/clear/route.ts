@@ -1,4 +1,4 @@
-import { clearActivity } from "@/lib/fixtures"
+import { clearActivity } from "@/lib/activity"
 
 export const dynamic = "force-dynamic"
 

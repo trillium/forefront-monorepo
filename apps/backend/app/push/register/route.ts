@@ -1,5 +1,5 @@
-import { logActivity } from "@/lib/fixtures"
-import { unauthorized, validateBearer } from "@/lib/backend"
+import { logActivity } from "@/lib/activity"
+import { registerDevice, unauthorized, validateBearer } from "@/lib/backend"
 
 export const dynamic = "force-dynamic"
 
@@ -11,9 +11,11 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json()
-    // Read the token to validate JSON shape, but never log its value.
     const token = typeof body?.deviceToken === "string" ? body.deviceToken : ""
-    logActivity("push_register", `Device token registered (${token.length} chars)`)
+    // Delegate to the push seam — swap its impl (real APNs registry) without
+    // touching this route.
+    const label = await registerDevice(token)
+    logActivity("push_register", label)
     return new Response(null, { status: 200 })
   } catch {
     return Response.json({ error: "invalid request" }, { status: 400 })

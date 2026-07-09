@@ -1,4 +1,4 @@
-import { readActivity } from "@/lib/fixtures"
+import { readActivity } from "@/lib/activity"
 
 export const dynamic = "force-dynamic"
 

@@ -1,10 +1,11 @@
 /**
- * Fixture deck + mutable server state for the Forefront backend.
+ * The deck the backend serves — and the single seam where its *source* can swap.
  *
- * v1 is in-memory and hardcoded per the ISA spec (no DB, no persistence).
- * When the deck becomes assistant-curated, this module is the single seam to
- * swap the constant array for a `brain`/`feed` query — everything else in the
- * router stays put.
+ * Today the deck is a static in-memory array. Tomorrow it becomes an
+ * assistant-curated `brain`/`feed` query (necessarily async). Callers go through
+ * `getDeck()` and `getVersion()` — never the raw array — so that swap is a
+ * one-function-body change, not a caller-rippling edit. This mirrors the iOS
+ * client's discipline (everything goes through `api.fetchStack()`).
  */
 
 /** A single deck card. Shape mirrors Docs/BACKEND_CONTRACT.md §3. */
@@ -19,13 +20,6 @@ export interface Card {
   ttl?: number
 }
 
-/** One entry in the dashboard activity feed. */
-export interface ActivityEntry {
-  timestamp: string
-  type: string
-  details: string
-}
-
 const HOUR_MS = 60 * 60 * 1000
 
 function agoISO(hours: number): string {
@@ -33,10 +27,11 @@ function agoISO(hours: number): string {
 }
 
 /**
- * Static fixture deck — index 0 is front-of-deck, lowest priority = highest.
- * Ported 1:1 from the retired Go server's `fixtureCards`.
+ * The current deck — index 0 is front-of-deck, lowest priority = highest.
+ * The static fixture source; replace this body with a `brain`/`feed` query when
+ * the deck becomes curated. Not exported: callers use `getDeck()`.
  */
-export const fixtureCards: Card[] = [
+const currentDeck: Card[] = [
   {
     id: "demo-1",
     url: "https://example.com",
@@ -70,6 +65,14 @@ export const fixtureCards: Card[] = [
 ]
 
 /**
+ * The ordered deck to serve. Async by design so the future curated source (a
+ * `brain`/`feed` query) drops in without changing a single caller.
+ */
+export async function getDeck(): Promise<Card[]> {
+  return currentDeck
+}
+
+/**
  * Deck version. The client only does equality comparison (int | ISO | etag),
  * so a monotonic string is fine. Bump via `bumpVersion()` to trigger a client
  * refetch during testing.
@@ -83,23 +86,4 @@ export function getVersion(): string {
 export function bumpVersion(): string {
   version = String(Number(version) + 1)
   return version
-}
-
-// --- Activity log (dashboard only; never logs tokens or request bodies) ---
-
-const MAX_ACTIVITY = 50
-const activityLog: ActivityEntry[] = []
-
-export function logActivity(type: string, details: string): void {
-  activityLog.push({ timestamp: new Date().toISOString(), type, details })
-  if (activityLog.length > MAX_ACTIVITY) activityLog.shift()
-}
-
-/** Newest-first snapshot for the dashboard. */
-export function readActivity(): ActivityEntry[] {
-  return [...activityLog].reverse()
-}
-
-export function clearActivity(): void {
-  activityLog.length = 0
 }
