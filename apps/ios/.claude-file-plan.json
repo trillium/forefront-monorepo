@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "agent_id": "chat-feature-forge",
+  "declared_at": "2026-07-09T17:00:00-07:00",
+  "allowed_files": [
+    { "path": "Docs/BACKEND_CONTRACT.md", "intent": "Append chat + actionable-push endpoint contract the client expects" },
+    { "path": "Docs/DECISIONS.md", "intent": "Record client-authors doctrine change and SQLite-over-GRDB call" },
+
+    { "path": "Forefront/Models/Chat.swift", "intent": "Chat thread model — Codable Identifiable Hashable Sendable" },
+    { "path": "Forefront/Models/Message.swift", "intent": "Message model plus MessageKind MessageRole MessageStatus enums" },
+    { "path": "Forefront/Models/ChatPage.swift", "intent": "Incremental messages-since-cursor envelope for networking" },
+
+    { "path": "Forefront/Storage/ChatStoring.swift", "intent": "Protocol seam for chat persistence and offline outbox" },
+    { "path": "Forefront/Storage/SQLiteChatStore.swift", "intent": "SQLite3-backed ChatStoring impl with outbox; GRDB swap TODO" },
+
+    { "path": "Forefront/Networking/ChatService.swift", "intent": "ChatNetworking protocol seam plus outbox-draining orchestration" },
+    { "path": "Forefront/Networking/APIClient+Chat.swift", "intent": "APIClient chat endpoint methods reusing rotator/auth" },
+    { "path": "Forefront/Networking/DemoChatService.swift", "intent": "Demo-mode chat fixture mirroring DemoStackService seam" },
+
+    { "path": "Forefront/UI/Chat/ChatListView.swift", "intent": "Inbox of chat threads with unread badges" },
+    { "path": "Forefront/UI/Chat/ChatThreadView.swift", "intent": "Message list plus composer with voice input" },
+    { "path": "Forefront/UI/Chat/MessageBubbleView.swift", "intent": "Rich rendering: text quick-replies link-to-web-card reminder" },
+    { "path": "Forefront/UI/Chat/ChatComposerView.swift", "intent": "Text composer with dictation entry point" },
+    { "path": "Forefront/UI/Chat/VoiceDictation.swift", "intent": "SFSpeechRecognizer dictation hook with graceful stub" },
+    { "path": "Forefront/UI/Chat/ChatEnvironment.swift", "intent": "Observable chat state injected into SwiftUI environment" },
+
+    { "path": "Forefront/App/AppRoot.swift", "intent": "Restructure root into Deck | Chats tab bar" },
+    { "path": "Forefront/App/ForefrontAppDelegate.swift", "intent": "Actionable notification handling and deep-link routing" },
+    { "path": "Forefront/Networking/PushRegistrar.swift", "intent": "Real permission UX plus actionable categories Done/Snooze/Reply" },
+
+    { "path": "ForefrontTests/ChatModelsTests.swift", "intent": "Chat/Message decode + status roundtrip tests" },
+    { "path": "ForefrontTests/SQLiteChatStoreTests.swift", "intent": "Store append/query/unread/outbox unit tests" },
+    { "path": "ForefrontTests/ChatServiceTests.swift", "intent": "MockURLProtocol chat networking + outbox drain tests" },
+    { "path": "ForefrontTests/Fixtures/chats.json", "intent": "Chat-list fixture" },
+    { "path": "ForefrontTests/Fixtures/messages.json", "intent": "Messages-since-cursor fixture" },
+
+    { "path": "Package.swift", "intent": "Wire chat sources into existing targets if new dirs are added" },
+    { "path": "Scripts/check-ui-compile.sh", "intent": "Emit any new chat library module if a new target dir is added" }
+  ]
+}
