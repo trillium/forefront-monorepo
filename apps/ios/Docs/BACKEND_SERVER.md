@@ -77,11 +77,14 @@ address. The QR payload's endpoint is resolved from env (below):
 > port, so a bare `next dev` ignores `PORT` from `.env`. `dotenv-cli` injects
 > `PORT` into next's environment first, so `bun run dev` binds 9238 with no flags.
 
-## Fixture deck
+## Deck
 
-Three cards, hardcoded in `lib/fixtures.ts` (front-of-deck first, lowest
-`priority` = highest). To force the app to refetch during testing, bump the
-version — call `bumpVersion()` or edit the `version` seed and restart.
+Three cards, hardcoded in `lib/deck.ts` (front-of-deck first, lowest `priority`
+= highest). Callers go through the `getDeck()` accessor and `getVersion()`, never
+a raw array — so swapping the source for a curated `brain`/`feed` query later is
+a one-function change, not a caller-rippling edit. To force the app to refetch
+during testing, bump the version — call `bumpVersion()` or edit the `version`
+seed and restart.
 
 ## Caveats (fixture server, by design)
 
@@ -101,6 +104,7 @@ The port to a production shape is deliberately deferred:
 - **Attach to PULSE** — a Next.js app can't be mounted in-process as a PULSE
   module; PULSE will **reverse-proxy** `/forefront/*` to this app and link it
   from `/status/` (One-URL rule).
-- **Assistant-curated deck** — swap `lib/fixtures.ts` for a `brain`/`feed` query
-  so the deck order is assembled by the DA. This is the whole reason the backend
-  lives in TS/bun rather than Go.
+- **Assistant-curated deck** — replace the body of `getDeck()` in `lib/deck.ts`
+  with a `brain`/`feed` query so the deck order is assembled by the DA. Already
+  async, so no caller changes. This is the whole reason the backend lives in
+  TS/bun rather than Go.
