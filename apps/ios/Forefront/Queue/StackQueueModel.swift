@@ -4,10 +4,9 @@ import ForefrontModels
 
 /// The queue model is the heart of the §5 behavior rules.
 ///
-/// Invariants:
-///   - `active` is sacred. Nothing outside `advance()` ever replaces it.
-///   - `merge(stack:)` replaces the queue but leaves `active` alone.
-///   - `flush(replacement:)` clears the queue but leaves `active` alone.
+/// Invariant: **user gestures own active; system events own the queue.** (ISC-161)
+///   - `active` is never replaced by network events — only `advance()` and `undo()` touch it.
+///   - `merge(stack:)` / `flush(replacement:)` / `adopt(_:)` replace the *queue* only.
 ///   - `prependUrgent(_:)` inserts a card at queue index 0; `active` unchanged.
 ///   - All mutations happen on the main actor; UI never sees a partial mutation.
 @MainActor
@@ -16,6 +15,12 @@ public final class StackQueueModel {
     public private(set) var active: Card?
     public private(set) var queue: [Card]
     public private(set) var version: StackVersion?
+
+    /// ISC-158: cards the user has swiped past this generation, in swipe order.
+    /// `advance()` pushes the card it is about to leave; `undo()` pops it back to
+    /// `active`. Cleared on every version change (ISC-160) so undo can never
+    /// resurrect a card from a stale deck generation.
+    public private(set) var history: [Card] = []
 
     /// ISC-152: cards the user has already swiped past in the current deck
     /// generation. A "generation" begins on first load and on any `adopt()` /
@@ -60,7 +65,10 @@ public final class StackQueueModel {
     public func advance() {
         // ISC-152: a swipe consumes the current active card only if there is one.
         // Count it as seen so the position indicator advances 1 → 2 → …
-        if active != nil {
+        // ISC-158: push the about-to-be-left card to history BEFORE the counter
+        // increments, so `undo()` can restore it and rewind `seenThisGeneration`.
+        if let current = active {
+            history.append(current)
             seenThisGeneration += 1
         }
         if queue.isEmpty {
@@ -70,12 +78,34 @@ public final class StackQueueModel {
         active = queue.removeFirst()
     }
 
+    /// ISC-159: reverse the last `advance()`. Pops the most-recently-swiped card
+    /// off `history`, returns the current `active` to the front of the queue
+    /// (deduplicated by id), then restores the popped card as `active`. Rewinds
+    /// `seenThisGeneration` so the position indicator ticks back down. A no-op
+    /// when there is nothing to undo.
+    public func undo() {
+        guard let previous = history.popLast() else { return }
+        // Return the current active to the front of the queue, deduping by id so
+        // the displaced card can never appear twice in the deck.
+        if let current = active {
+            queue.removeAll { $0.id == current.id }
+            queue.insert(current, at: 0)
+        }
+        active = previous
+        if seenThisGeneration > 0 {
+            seenThisGeneration -= 1
+        }
+    }
+
     /// ISC-152: reset the seen-counter for a fresh deck generation. Called only
     /// when an incoming stack carries a version we have not already adopted, so a
     /// same-version re-merge (idempotent refresh) does not rewind the indicator.
     private func startGenerationIfNewVersion(_ incoming: StackVersion) {
         if version != incoming {
             seenThisGeneration = 0
+            // ISC-160: a new deck generation invalidates undo history — a card
+            // from the old deck must never be resurrectable into the new one.
+            history = []
         }
     }
 

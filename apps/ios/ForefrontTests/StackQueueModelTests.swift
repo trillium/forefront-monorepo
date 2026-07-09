@@ -191,4 +191,49 @@ final class StackQueueModelTests: XCTestCase {
         XCTAssertEqual(model3.active?.id, "held", "a flush must not replace active")
         XCTAssertEqual(model3.queue.count, 0)
     }
+
+    // MARK: - F6: Undo swipe (ISC-158..161)
+
+    func testUndoRestoresPreviousActive() {
+        let model = StackQueueModel(
+            active: makeCard("a"),
+            queue: [makeCard("b"), makeCard("c")]
+        )
+        model.advance()   // a → history, b becomes active
+        XCTAssertEqual(model.active?.id, "b")
+        XCTAssertEqual(model.history.map(\.id), ["a"])
+        model.undo()
+        XCTAssertEqual(model.active?.id, "a", "undo must restore the previous active")
+        XCTAssertEqual(model.queue.first?.id, "b", "displaced active returns to queue front")
+        XCTAssertEqual(model.history.count, 0)
+        XCTAssertEqual(model.seenThisGeneration, 0)
+    }
+
+    func testUndoDeduplicatesQueueById() {
+        // If the card being displaced is already in the queue (shouldn't happen normally
+        // but defensive: dedup ensures no duplicate by id after undo).
+        let model = StackQueueModel(
+            active: makeCard("a"),
+            queue: [makeCard("b"), makeCard("c")]
+        )
+        model.advance()  // a → history, b is active
+        // Manually pollute queue with b (simulating an edge case)
+        model.advance()  // b → history, c is active
+        model.undo()     // b should come back to front, c returns; c must not duplicate
+        XCTAssertEqual(model.queue.filter { $0.id == "c" }.count, 1, "undo must not duplicate the displaced card in queue")
+    }
+
+    func testVersionChangesClearHistory() {
+        let model = StackQueueModel()
+        model.merge(stack: CardStack(version: StackVersion(integer: 1), cards: [
+            makeCard("a"), makeCard("b")
+        ]))
+        model.advance()
+        XCTAssertEqual(model.history.count, 1)
+        // New version arrives — history must be wiped (ISC-160)
+        model.adopt(CardStack(version: StackVersion(integer: 2), cards: [
+            makeCard("b"), makeCard("c")
+        ]))
+        XCTAssertEqual(model.history.count, 0, "undo history must be cleared on version change")
+    }
 }

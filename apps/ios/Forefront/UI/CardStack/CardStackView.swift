@@ -73,6 +73,26 @@ public struct CardStackView: View {
                 } else if model.queue.isEmpty {
                     EmptyDeckView()
                 }
+
+                // ISC-158: undo button — visible when swipe history exists.
+                if !model.history.isEmpty {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Button {
+                                withAnimation(.spring(response: 0.3)) { model.undo() }
+                            } label: {
+                                Image(systemName: "arrow.uturn.backward.circle.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 24)
+                                    .padding(.bottom, 40)
+                            }
+                            Spacer()
+                        }
+                    }
+                    .zIndex(Double(peekDepth + 2))
+                }
             }
             // ISC-155: fire haptic feedback on card advance. Uses the iOS 17
             // SwiftUI `.sensoryFeedback` API (preferred over UIImpactFeedback-
