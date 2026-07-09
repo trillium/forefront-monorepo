@@ -1,0 +1,19 @@
+{
+  "chats": [
+    {
+      "id": "ch_reminders",
+      "title": "Reminders",
+      "lastMessageAt": "2026-07-09T16:40:02Z",
+      "unreadCount": 2,
+      "lastMessagePreview": "Have you booked the flight yet?",
+      "topic": "reminders"
+    },
+    {
+      "id": "ch_general",
+      "title": "Agent",
+      "lastMessageAt": "2026-07-09T15:12:00Z",
+      "unreadCount": 0,
+      "lastMessagePreview": "Sounds good."
+    }
+  ]
+}
