@@ -89,11 +89,12 @@ else
   echo "    found: $DEVICE_NAME ($DEVICE_ID)"
 fi
 
-# 2. Regenerate the Xcode project if missing (it's gitignored).
-if [[ ! -d "$REPO_ROOT/$SCHEME.xcodeproj" ]]; then
-  command -v xcodegen >/dev/null || { echo "✗ xcodegen missing: brew install xcodegen" >&2; exit 2; }
-  ( cd "$REPO_ROOT" && xcodegen generate )
-fi
+# 2. Regenerate the Xcode project (it's gitignored). ALWAYS regenerate, not just
+# when missing: the generated file list goes stale the moment a source file is
+# added or removed, and a stale project fails with "cannot find type X in scope"
+# for the new file. xcodegen is fast and idempotent, so regenerate every run.
+command -v xcodegen >/dev/null || { echo "✗ xcodegen missing: brew install xcodegen" >&2; exit 2; }
+( cd "$REPO_ROOT" && xcodegen generate )
 
 # 3. Build for device. Signing overrides passed here only — never in project.yml.
 echo "==> Building signed build (team $TEAM_ID) — first run may take a few minutes"

@@ -59,40 +59,43 @@ public struct DeckScreen: View {
     public init() {}
 
     public var body: some View {
-        ZStack(alignment: .topTrailing) {
-            // The cached deck stays rendered and swipeable behind every overlay,
-            // including the re-scan prompt (ISC-150).
-            CardStackView(model: env.queue)
-                .ignoresSafeArea(edges: .horizontal)
-
-            VStack {
-                HStack(alignment: .top) {
-                    // ISC-153: masthead — day-part greeting + live remaining count
-                    // above the deck. Count is the queue's remainingCount so it
-                    // ticks as cards are swiped or arrive (ISC-156).
-                    MastheadView(cardCount: env.queue.remainingCount)
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if let lastRefreshed = env.lastRefreshed {
-                            Text(relativeTime(from: lastRefreshed, to: now))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Button { showingSettings = true } label: {
-                            Image(systemName: "gear")
-                                .padding(8)
-                                .background(.thinMaterial, in: Circle())
-                        }
+        VStack(spacing: 0) {
+            // ISC-153: header bar — day-part greeting + live count on the left,
+            // last-refreshed + settings on the right. Kept in normal layout flow
+            // ABOVE the deck so it never overlaps the active card. Count is the
+            // queue's remainingCount so it ticks as cards are swiped (ISC-156).
+            HStack(alignment: .top) {
+                MastheadView(cardCount: env.queue.remainingCount)
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 4) {
+                    if let lastRefreshed = env.lastRefreshed {
+                        Text(relativeTime(from: lastRefreshed, to: now))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding()
+                    Button { showingSettings = true } label: {
+                        Image(systemName: "gear")
+                            .padding(8)
+                            .background(.thinMaterial, in: Circle())
+                    }
                 }
-                // F5: a 401 surfaces a VISIBLE re-scan prompt instead of a silent
-                // offline state (ISC-149). It routes into the existing rescan
-                // flow (OnboardingView) and preserves the cached deck (ISC-150).
-                if env.needsReauth {
-                    ReauthBanner(onRescan: { showingReauth = true })
-                }
-                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+
+            // F5: a 401 surfaces a VISIBLE re-scan prompt instead of a silent
+            // offline state (ISC-149). Routes into the rescan flow (OnboardingView)
+            // and preserves the cached deck (ISC-150).
+            if env.needsReauth {
+                ReauthBanner(onRescan: { showingReauth = true })
+                    .padding(.top, 4)
+            }
+
+            // The deck fills the space below the header. The cached deck stays
+            // rendered and swipeable behind the offline banner (ISC-150).
+            ZStack(alignment: .bottom) {
+                CardStackView(model: env.queue)
+                    .ignoresSafeArea(edges: .horizontal)
                 if env.isOffline {
                     // ISC-154: pass the last-refreshed time so the banner can show
                     // an "as of HH:mm" staleness line.

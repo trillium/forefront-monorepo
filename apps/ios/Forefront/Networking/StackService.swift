@@ -61,7 +61,7 @@ extension StackService: StackRefreshing {}
 public actor StackService {
     private let api: any StackNetworking
     private let cache: any StackCaching
-    private let tokenStore: KeychainStore
+    private let tokenStore: any TokenStoring
 
     /// Minimum wall-clock interval between two *automatic* refresh attempts.
     public static let minAutomaticInterval: TimeInterval = 30
@@ -73,7 +73,7 @@ public actor StackService {
     /// not throttled and not merely coalesced). Drives the automatic throttle.
     private var lastAttemptAt: Date?
 
-    public init(api: any StackNetworking, cache: any StackCaching, tokenStore: KeychainStore) {
+    public init(api: any StackNetworking, cache: any StackCaching, tokenStore: any TokenStoring) {
         self.api = api
         self.cache = cache
         self.tokenStore = tokenStore

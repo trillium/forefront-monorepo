@@ -24,5 +24,17 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Forefront uses your camera to scan the server QR code.</string>
+	<!-- App Transport Security: Forefront talks ONLY to tailnet-private endpoints
+	     (Docs/BACKEND_CONTRACT.md §6), which are plaintext HTTP on Tailscale IP
+	     literals like http://100.x.y.z:PORT. ATS blocks plaintext HTTP by default,
+	     which silently fails every request (surfaced as "Offline"). The tailnet IS
+	     the security boundary, so allow it. App-Review path: switch the QR payload
+	     to the MagicDNS name and replace this with a scoped NSExceptionDomains
+	     entry for `ts.net` (NSExceptionAllowsInsecureHTTPLoads + NSIncludesSubdomains). -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

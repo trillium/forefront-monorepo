@@ -160,18 +160,16 @@ public struct MastheadView: View {
     }
 
     public var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(masthead.greeting)
-                    .font(.title2.weight(.semibold))
-                Text(masthead.cardCountText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+        // Hugs its content so the parent header can place the settings control
+        // beside it without the greeting wrapping or the gear overlapping.
+        VStack(alignment: .leading, spacing: 2) {
+            Text(masthead.greeting)
+                .font(.title2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(masthead.cardCountText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 8)
         // ISC-157: decorative header — does not intercept touches.
         .allowsHitTesting(false)
     }
