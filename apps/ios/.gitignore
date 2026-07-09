@@ -26,6 +26,10 @@ Package.resolved
 *.dSYM.zip
 *.dSYM
 
+## Local device credentials (gitignored — write these yourself)
+.team-id
+.device-id
+
 ## Tooling
 *.log
 .tmp/
