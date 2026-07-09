@@ -34,6 +34,14 @@ public protocol StackNetworking: Sendable {
 
 extension APIClient: StackNetworking {}
 
+/// Protocol seam so AppEnvironment can substitute a DemoStackService for App Review
+/// without touching real endpoints. StackService is the production conformer. (ISC-162)
+public protocol StackRefreshing: Sendable {
+    func refresh(trigger: RefreshTrigger, now: Date) async -> RefreshOutcome
+}
+
+extension StackService: StackRefreshing {}
+
 /// Orchestrates the launch / push / pull refresh flow:
 ///   1. lastUpdated() — cheap probe
 ///   2. compare to cached version

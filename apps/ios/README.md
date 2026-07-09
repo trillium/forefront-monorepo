@@ -50,6 +50,21 @@ The scaffold ships as a Swift source tree, not a pre-baked `.xcodeproj` (Apple's
 - The device must be **signed in to the same Tailscale tailnet** that hosts the backend, with the Tailscale app installed and connected. Card URLs only resolve inside the tailnet.
 - A **QR code from the backend** containing the endpoint list + auth token. Without it the app shows an onboarding screen with a scan button.
 
+## App Review: Demo Mode
+
+Forefront connects to a private Tailscale tailnet — reviewers cannot join it. Demo mode
+provides a bundled fixture deck that works with no server or token.
+
+**To activate demo mode:**
+
+1. Open the app. The onboarding screen appears (no QR code scanned).
+2. Tap **Try Demo Mode** at the bottom of the screen.
+3. The app loads a 3-card fixture deck using public URLs. Swipe through cards normally.
+4. To exit demo mode: Settings ▸ Clear cached deck, then force-quit and relaunch.
+
+Demo mode is a UserDefaults flag (`forefront.demoMode`). It never touches the real
+`stack.json` cache and never registers for push notifications.
+
 ## Why this is not just a web wrapper (App Store Guideline 4.2)
 
 - **QR onboarding** is a native flow (camera + Keychain + AVFoundation), not something a web wrapper does.

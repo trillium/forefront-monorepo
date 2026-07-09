@@ -13,22 +13,27 @@ public struct AppRoot: View {
 
     public var body: some View {
         Group {
-            if hasToken {
+            if env.isDemoMode || hasToken {
                 DeckScreen()
                     .environment(\.forefrontBearerToken, env.bearerToken)
             } else {
-                OnboardingView(onComplete: {
-                    hasToken = true
-                    Task {
-                        env.rebuildNetworking()
-                        await env.performRefresh(trigger: .automatic)
+                OnboardingView(
+                    onComplete: {
+                        hasToken = true
+                        Task {
+                            env.rebuildNetworking()
+                            await env.performRefresh(trigger: .automatic)
+                        }
+                    },
+                    onDemoMode: {
+                        env.isDemoMode = true
                     }
-                })
+                )
             }
         }
         .task {
             hasToken = (env.bearerToken?.isEmpty == false)
-            if hasToken && !didFirstRefresh {
+            if (hasToken || env.isDemoMode) && !didFirstRefresh {
                 didFirstRefresh = true
                 await env.performRefresh(trigger: .automatic)
             }
@@ -158,6 +163,9 @@ public struct SettingsView: View {
                 Section("Cache") {
                     Button("Clear cached deck") {
                         try? env.cache.clear()
+                        // ISC-165: clearing the deck is also the documented exit from
+                        // demo mode — turn the flag off so a relaunch onboards normally.
+                        if env.isDemoMode { env.isDemoMode = false }
                         didClear = true
                     }
                     .foregroundStyle(.red)

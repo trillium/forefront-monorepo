@@ -17,13 +17,27 @@ public final class AppEnvironment {
     public let cache: CacheStore
     public private(set) var rotator: EndpointRotator
     public private(set) var api: APIClient
-    public private(set) var service: StackService
+    public private(set) var service: any StackRefreshing
     public let queue: StackQueueModel
     public private(set) var bearerToken: String?
     public private(set) var isOffline: Bool = false
     /// F5: set when a refresh returns `.unauthorized`. Drives a visible re-scan
     /// prompt on the deck. The cached deck stays on disk and swipeable.
     public var needsReauth: Bool = false
+
+    /// ISC-164/165: observable demo-mode flag. Setting true switches the service to
+    /// DemoStackService and allows AppRoot to render without a token. Persisted to
+    /// AppConfigStore (UserDefaults) so the state survives relaunch.
+    public var isDemoMode: Bool = false {
+        didSet {
+            appConfig.isDemoMode = isDemoMode
+            if isDemoMode {
+                service = DemoStackService()
+            } else {
+                rebuildNetworking()
+            }
+        }
+    }
 
     public init() {
         let keychain = KeychainStore()
@@ -54,8 +68,17 @@ public final class AppEnvironment {
             tokenProvider: { [tokenStore] in (try? tokenStore.loadToken()) ?? nil }
         )
         self.api = api
+        // Set the production service before touching `isDemoMode` so `didSet` side
+        // effects never run against a half-initialized instance. `didSet` does not
+        // fire during `init`, but we initialize `service` first regardless and then
+        // overwrite it with the demo fixture service if demo mode was persisted.
         self.service = StackService(api: api, cache: cache, tokenStore: keychain)
         self.queue = StackQueueModel()
+        let demo = appConfig.isDemoMode
+        self.isDemoMode = demo
+        if demo {
+            self.service = DemoStackService()
+        }
     }
 
     /// ISC-154: the time the cached deck was last successfully refreshed, for the
@@ -86,7 +109,7 @@ public final class AppEnvironment {
     /// `queue.adopt(...)`, which merges without replacing the sacred `active`
     /// card. No branch here assigns `active` directly.
     public func performRefresh(trigger: RefreshTrigger = .automatic) async {
-        let outcome = await service.refresh(trigger: trigger)
+        let outcome = await service.refresh(trigger: trigger, now: Date())
         switch outcome {
         case .unchanged:
             isOffline = false

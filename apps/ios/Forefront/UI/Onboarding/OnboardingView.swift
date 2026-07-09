@@ -13,9 +13,13 @@ public struct OnboardingView: View {
     @State private var error: String?
 
     public var onComplete: () -> Void
+    /// ISC-165: optional App Review demo-mode entry. When provided, a "Try Demo
+    /// Mode" affordance appears on the explain screen. Nil at re-scan call sites.
+    public var onDemoMode: (() -> Void)?
 
-    public init(onComplete: @escaping () -> Void) {
+    public init(onComplete: @escaping () -> Void, onDemoMode: (() -> Void)? = nil) {
         self.onComplete = onComplete
+        self.onDemoMode = onDemoMode
     }
 
     enum Phase {
@@ -68,6 +72,15 @@ public struct OnboardingView: View {
             }
             .buttonStyle(.borderedProminent)
             .padding(.horizontal, 32)
+
+            // ISC-165: App Review demo mode — reviewers can't join the tailnet, so
+            // this loads a bundled fixture deck with no server or token.
+            if let onDemoMode {
+                Button("Try Demo Mode") { onDemoMode() }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 8)
+            }
         }
     }
 

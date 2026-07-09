@@ -12,8 +12,11 @@ public final class ForefrontAppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         // Push registration is best-effort and runs at first foreground.
+        // ISC-166: never register for push in demo mode — App Review has no server
+        // and no push infrastructure to talk to.
         Task { @MainActor in
             let env = AppEnvironment.shared
+            guard !env.isDemoMode else { return }
             let registrar = PushRegistrar(api: env.api)
             await registrar.register()
         }
@@ -46,8 +49,10 @@ public final class ForefrontAppDelegate: NSObject, UIApplicationDelegate {
     ) {
         Task { @MainActor in
             let env = AppEnvironment.shared
+            // ISC-166: demo mode never talks to a server; report no data and bail.
+            guard !env.isDemoMode else { completionHandler(.noData); return }
             // Silent push is an automatic trigger — throttled and coalesced.
-            let outcome = await env.service.refresh(trigger: .automatic)
+            let outcome = await env.service.refresh(trigger: .automatic, now: Date())
             switch outcome {
             case .unchanged: completionHandler(.noData)
             case .updated(let stack):
