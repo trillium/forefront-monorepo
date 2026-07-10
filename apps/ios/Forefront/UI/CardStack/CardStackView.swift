@@ -40,8 +40,10 @@ public struct CardStackView: View {
                                 total: model.deckTotal
                             )
                         }
-                        .offset(x: dragOffset.width)
-                        .rotationEffect(.degrees(Double(dragOffset.width) / 30))
+                        // Track the finger in BOTH axes (not just x) and tilt as it
+                        // moves — the physical "card in hand" feel.
+                        .offset(dragOffset)
+                        .rotationEffect(.degrees(Double(dragOffset.width) / 16))
                         .zIndex(Double(peekDepth + 1))
                         .gesture(
                             DragGesture()
@@ -49,21 +51,35 @@ public struct CardStackView: View {
                                     dragOffset = value.translation
                                 }
                                 .onEnded { value in
-                                    let threshold = geo.size.width * advanceThreshold
-                                    if abs(value.translation.width) > threshold {
-                                        withAnimation(.easeOut(duration: 0.25)) {
+                                    // Tinder/Bumble feel: commit on DISTANCE *or* VELOCITY.
+                                    // `predictedEndTranslation` projects where a flick would
+                                    // land, so a fast short flick throws the card the same as
+                                    // a slow long drag — a slow under-threshold drag just
+                                    // rubber-bands back and stays put.
+                                    let width = geo.size.width
+                                    let distance = value.translation.width
+                                    let projected = value.predictedEndTranslation.width
+                                    let committed = abs(distance) > width * advanceThreshold
+                                        || abs(projected) > width * 0.5
+                                    if committed {
+                                        let dir: CGFloat = distance > 0 ? 1 : -1
+                                        // Fly off ALONG the finger's trajectory (keep the
+                                        // vertical component), not dead-straight sideways.
+                                        withAnimation(.easeOut(duration: 0.22)) {
                                             dragOffset = CGSize(
-                                                width: value.translation.width > 0 ? geo.size.width * 1.5 : -geo.size.width * 1.5,
-                                                height: 0
+                                                width: dir * width * 1.6,
+                                                height: value.translation.height
+                                                    + value.predictedEndTranslation.height * 0.25
                                             )
                                         }
                                         Task { @MainActor in
-                                            try? await Task.sleep(nanoseconds: 250_000_000)
+                                            try? await Task.sleep(nanoseconds: 200_000_000)
                                             model.advance()
                                             dragOffset = .zero
                                         }
                                     } else {
-                                        withAnimation(.spring(response: 0.3)) {
+                                        // Rubber-band back to rest — and stay there.
+                                        withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.72)) {
                                             dragOffset = .zero
                                         }
                                     }
@@ -109,9 +125,15 @@ public struct CardStackView: View {
     }
 
     private func peekCard(card: Card, depth: Int) -> some View {
-        CardView(card: card)
-            .scaleEffect(1.0 - 0.05 * CGFloat(depth))
-            .offset(y: 12 * CGFloat(depth))
+        // As the top card is dragged away, the NEAREST peek card (depth 1) rises
+        // toward the active slot — the deck "comes forward" (Tinder feel). Deeper
+        // cards hold their resting offset.
+        let progress = depth == 1 ? min(abs(dragOffset.width) / 120, 1) : 0
+        let scale = (1.0 - 0.05 * CGFloat(depth)) + 0.05 * progress
+        let yOffset = 12 * CGFloat(depth) - 12 * progress
+        return CardView(card: card)
+            .scaleEffect(scale)
+            .offset(y: yOffset)
             .zIndex(Double(peekDepth - depth))
             .allowsHitTesting(false)
     }
