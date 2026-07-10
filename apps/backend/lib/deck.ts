@@ -8,6 +8,8 @@
  * client's discipline (everything goes through `api.fetchStack()`).
  */
 
+import { bumpDeckVersion, getDeckVersion, listCards } from "@/lib/store"
+
 /** A single deck card. Shape mirrors Docs/BACKEND_CONTRACT.md §3. */
 export interface Card {
   id: string
@@ -65,25 +67,41 @@ const currentDeck: Card[] = [
 ]
 
 /**
- * The ordered deck to serve. Async by design so the future curated source (a
- * `brain`/`feed` query) drops in without changing a single caller.
+ * The ordered deck to serve. Now backed by the agent-curated store: cards the
+ * DA enqueued via `POST /agent/cards` take over. When the store is empty (fresh
+ * device test, no agent curation yet) it falls back to the static fixtures
+ * above, preserving the original onboarding flow (Docs/DECISIONS.md B-05).
+ *
+ * Async by design (unchanged signature) so this swap ripples to zero callers.
  */
 export async function getDeck(): Promise<Card[]> {
+  const curated = listCards()
+  if (curated.length > 0) {
+    // Store rows carry `ttl: number | null`; the contract's Card omits ttl when
+    // absent, so map null → undefined.
+    return curated.map((c) => ({
+      id: c.id,
+      url: c.url,
+      title: c.title,
+      priority: c.priority,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      type: c.type,
+      ...(c.ttl !== null ? { ttl: c.ttl } : {}),
+    }))
+  }
   return currentDeck
 }
 
 /**
- * Deck version. The client only does equality comparison (int | ISO | etag),
- * so a monotonic string is fine. Bump via `bumpVersion()` to trigger a client
- * refetch during testing.
+ * Deck version. The client only does equality comparison (int | ISO | etag).
+ * Sourced from the store so it reflects agent card mutations (each upsert/delete
+ * bumps it) and survives restarts. `bumpVersion()` remains for manual testing.
  */
-let version = "1"
-
 export function getVersion(): string {
-  return version
+  return getDeckVersion()
 }
 
 export function bumpVersion(): string {
-  version = String(Number(version) + 1)
-  return version
+  return bumpDeckVersion()
 }
