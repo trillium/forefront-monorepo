@@ -6,10 +6,12 @@ import ForefrontModels
 ///
 /// One instance is created per session and held by `StackService`.
 public final class APIClient: Sendable {
-    private let rotator: EndpointRotator
+    // `internal` (not `private`) so the same-module `APIClient+Chat` extension
+    // can reuse the rotator, decoder, and request helpers.
+    let rotator: EndpointRotator
     private let tokenProvider: @Sendable () async -> String?
     private let session: URLSession
-    private let decoder: JSONDecoder
+    let decoder: JSONDecoder
 
     public init(
         rotator: EndpointRotator,
@@ -63,7 +65,7 @@ public final class APIClient: Sendable {
 
     // MARK: - 5xx retry-once (ISC-31)
 
-    private func get(_ url: URL) async throws -> Data {
+    func get(_ url: URL) async throws -> Data {
         let req = try await authedRequest(url: url)
         do {
             return try await perform(req)
@@ -73,7 +75,7 @@ public final class APIClient: Sendable {
         }
     }
 
-    private func perform(_ req: URLRequest) async throws -> Data {
+    func perform(_ req: URLRequest) async throws -> Data {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: req)
@@ -84,7 +86,7 @@ public final class APIClient: Sendable {
         return data
     }
 
-    private func authedRequest(url: URL) async throws -> URLRequest {
+    func authedRequest(url: URL) async throws -> URLRequest {
         var req = URLRequest(url: url)
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         if let token = await tokenProvider(), !token.isEmpty {
