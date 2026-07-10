@@ -1,0 +1,32 @@
+{
+  "messages": [
+    {
+      "id": "m_1000",
+      "chatId": "ch_reminders",
+      "role": "user",
+      "kind": "text",
+      "body": "morning",
+      "createdAt": "2026-07-09T16:39:00Z"
+    },
+    {
+      "id": "m_1001",
+      "chatId": "ch_reminders",
+      "role": "agent",
+      "kind": "reminder",
+      "body": "Have you booked the flight yet? It's due by Friday.",
+      "createdAt": "2026-07-09T16:40:02Z",
+      "quickReplies": ["Booked it", "Snooze 1h", "Not yet"],
+      "reminder": { "dueAt": "2026-07-11T17:00:00Z" }
+    },
+    {
+      "id": "m_1002",
+      "chatId": "ch_reminders",
+      "role": "agent",
+      "kind": "linkToWebCard",
+      "body": "Fill in your travel details:",
+      "createdAt": "2026-07-09T16:41:00Z",
+      "webCardURL": "https://forefront.primary.tailnet-name.ts.net/forms/travel"
+    }
+  ],
+  "nextCursor": "c_1002"
+}
