@@ -80,7 +80,28 @@ export interface StoredCard {
   ttl: number | null
 }
 
-/** An actionable-push record (§11). APNs *sending* is out of scope (B-04). */
+/**
+ * The per-device outcome of one APNs delivery attempt, recorded on the push so
+ * the drain result is inspectable (contract §11, feat/apns-sender). `status` is
+ * the APNs HTTP status (200 = accepted); `reason` is Apple's rejection reason
+ * string when present (e.g. `BadDeviceToken`); `apnsId` is the `apns-id` header
+ * Apple echoes for correlation. `error` is set when the send never reached Apple
+ * (transport failure) rather than a non-200 APNs response.
+ */
+export interface PushDeliveryResult {
+  /** APNs device token targeted (hex). */
+  deviceToken: string
+  status: number | null
+  reason: string | null
+  apnsId: string | null
+  error: string | null
+}
+
+/**
+ * An actionable-push record (§11). Records the push intent (recorded by
+ * `enqueuePush`) plus its delivery state once the drain has run. `sent` is false
+ * until the drain attempts delivery to every registered device.
+ */
 export interface PushRecord {
   id: string
   chatId: string
@@ -92,6 +113,19 @@ export interface PushRecord {
   createdAt: string
   /** `seq`-based cursor so consumers can page pushes too. */
   cursor: string
+  /** True once the drain has attempted delivery for this record. */
+  sent: boolean
+  /** ISO timestamp the record was marked sent, or null when still pending. */
+  sentAt: string | null
+  /** Per-device delivery outcomes recorded by the drain, or null when pending. */
+  apnsResults: PushDeliveryResult[] | null
+}
+
+/** A registered APNs device token (§5). The drain targets every row here. */
+export interface DeviceToken {
+  deviceToken: string
+  environment: string
+  registeredAt: string
 }
 
 // ── DB bootstrap ─────────────────────────────────────────────────────────────
@@ -209,7 +243,23 @@ function migrate(db: Database): void {
       title         TEXT NOT NULL,
       body          TEXT NOT NULL,
       quick_replies TEXT,
-      created_at    TEXT NOT NULL
+      created_at    TEXT NOT NULL,
+      -- Delivery leg (feat/apns-sender). A push record starts unsent; the drain
+      -- marks it sent once every registered device has been attempted. sent = 0
+      -- until then, so the drain is safely re-runnable and only touches new rows.
+      sent          INTEGER NOT NULL DEFAULT 0,
+      sent_at       TEXT,
+      -- JSON array of per-device APNs results, for observability. NULL until sent.
+      apns_results  TEXT
+    );
+
+    -- APNs device tokens, one row per token (upsert). The drain targets these.
+    -- environment records which APNs host the token was minted against so a
+    -- sandbox-built token is never blasted at the production gateway.
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      device_token  TEXT PRIMARY KEY,
+      environment   TEXT NOT NULL,
+      registered_at TEXT NOT NULL
     );
 
     -- Single-row key/value for the deck version, so it survives restarts.
@@ -218,6 +268,34 @@ function migrate(db: Database): void {
       value TEXT NOT NULL
     );
   `)
+
+  // ── In-place migrations for stores created before feat/apns-sender ──────────
+  // `CREATE TABLE IF NOT EXISTS` never alters an existing table, so a DB opened
+  // by an older build keeps the pre-sender `pushes` shape. Add the delivery
+  // columns idempotently. bun:sqlite has no `ADD COLUMN IF NOT EXISTS`, so probe
+  // the schema first.
+  addColumnIfMissing(db, "pushes", "sent", "INTEGER NOT NULL DEFAULT 0")
+  addColumnIfMissing(db, "pushes", "sent_at", "TEXT")
+  addColumnIfMissing(db, "pushes", "apns_results", "TEXT")
+}
+
+/**
+ * Add `column` to `table` if a column of that name is not already present.
+ * Idempotent DDL for evolving a store opened by an older build. `definition`
+ * must supply a constant/NULL default (SQLite forbids non-constant ADD COLUMN
+ * defaults), which every caller here satisfies.
+ */
+function addColumnIfMissing(
+  db: Database,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  const cols = db.query(`PRAGMA table_info(${table})`).all() as Array<{
+    name: string
+  }>
+  if (cols.some((c) => c.name === column)) return
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
 }
 
 // Module singleton. Lazily opened so importing the module (e.g. during
@@ -774,7 +852,52 @@ export function bumpDeckVersion(): string {
   return next
 }
 
-// ── Push ops (record only; APNs sending out of scope, B-04) ──────────────────
+// ── Push ops (record + delivery state; sending lives in lib/apns.ts) ─────────
+
+/** Raw `pushes` row shape shared by the read paths. */
+interface PushRow {
+  seq: number
+  id: string
+  chat_id: string
+  message_id: string
+  category: string
+  title: string
+  body: string
+  quick_replies: string | null
+  created_at: string
+  sent: number
+  sent_at: string | null
+  apns_results: string | null
+}
+
+/** Parse the stored `apns_results` JSON back into typed delivery results. */
+function parseApnsResults(raw: string | null): PushDeliveryResult[] | null {
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return null
+    return parsed as PushDeliveryResult[]
+  } catch {
+    return null
+  }
+}
+
+function rowToPush(r: PushRow): PushRecord {
+  return {
+    id: r.id,
+    chatId: r.chat_id,
+    messageId: r.message_id,
+    category: r.category,
+    title: r.title,
+    body: r.body,
+    quickReplies: parseQuickReplies(r.quick_replies),
+    createdAt: r.created_at,
+    cursor: `c_${r.seq}`,
+    sent: r.sent === 1,
+    sentAt: r.sent_at,
+    apnsResults: parseApnsResults(r.apns_results),
+  }
+}
 
 /** Enqueue an actionable-push record for a reminder/question message (§11). */
 export function enqueuePush(input: {
@@ -795,8 +918,8 @@ export function enqueuePush(input: {
   const info = database
     .query(
       `INSERT INTO pushes
-         (id, chat_id, message_id, category, title, body, quick_replies, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, chat_id, message_id, category, title, body, quick_replies, created_at, sent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     )
     .run(
       id,
@@ -818,6 +941,9 @@ export function enqueuePush(input: {
     quickReplies: parseQuickReplies(quickReplies),
     createdAt: ts,
     cursor: `c_${Number(info.lastInsertRowid)}`,
+    sent: false,
+    sentAt: null,
+    apnsResults: null,
   }
 }
 
@@ -829,32 +955,106 @@ export function listPushes(
   const floor = parseCursor(since)
   const rows = db()
     .query(
-      `SELECT seq, id, chat_id, message_id, category, title, body, quick_replies, created_at
+      `SELECT seq, id, chat_id, message_id, category, title, body, quick_replies,
+              created_at, sent, sent_at, apns_results
          FROM pushes WHERE seq > ? ORDER BY seq ASC LIMIT ?`,
     )
-    .all(floor, limit) as Array<{
-    seq: number
-    id: string
-    chat_id: string
-    message_id: string
-    category: string
-    title: string
-    body: string
-    quick_replies: string | null
-    created_at: string
-  }>
-  const pushes: PushRecord[] = rows.map((r) => ({
-    id: r.id,
-    chatId: r.chat_id,
-    messageId: r.message_id,
-    category: r.category,
-    title: r.title,
-    body: r.body,
-    quickReplies: parseQuickReplies(r.quick_replies),
-    createdAt: r.created_at,
-    cursor: `c_${r.seq}`,
-  }))
+    .all(floor, limit) as PushRow[]
+  const pushes = rows.map(rowToPush)
   const nextCursor =
     pushes.length > 0 ? pushes[pushes.length - 1]!.cursor : `c_${floor}`
   return { pushes, nextCursor }
+}
+
+/**
+ * Unsent push records, oldest→newest. The drain reads these, delivers each to
+ * every registered device, then calls `markPushSent`. Because only `sent = 0`
+ * rows are returned, a re-run after a partial or full drain never re-sends an
+ * already-delivered record.
+ */
+export function listUnsentPushes(limit = 500): PushRecord[] {
+  const rows = db()
+    .query(
+      `SELECT seq, id, chat_id, message_id, category, title, body, quick_replies,
+              created_at, sent, sent_at, apns_results
+         FROM pushes WHERE sent = 0 ORDER BY seq ASC LIMIT ?`,
+    )
+    .all(limit) as PushRow[]
+  return rows.map(rowToPush)
+}
+
+/** Count push records still awaiting a drain. Cheap status probe. */
+export function countUnsentPushes(): number {
+  const row = db()
+    .query("SELECT COUNT(*) AS n FROM pushes WHERE sent = 0")
+    .get() as { n: number }
+  return row.n
+}
+
+/**
+ * Mark a push record delivered, recording the per-device APNs results. Called by
+ * the drain after every registered device has been attempted. Idempotent: a
+ * second call just overwrites the results with the newer attempt's outcome.
+ */
+export function markPushSent(
+  pushId: string,
+  results: PushDeliveryResult[],
+): void {
+  db()
+    .query(
+      "UPDATE pushes SET sent = 1, sent_at = ?, apns_results = ? WHERE id = ?",
+    )
+    .run(nowISO(), JSON.stringify(results), pushId)
+}
+
+// ── Device-token ops (§5) ────────────────────────────────────────────────────
+
+/**
+ * Register (upsert) an APNs device token. A repeat POST of the same token
+ * refreshes its environment + timestamp rather than duplicating the row. The
+ * drain sends to every token here.
+ */
+export function upsertDeviceToken(input: {
+  deviceToken: string
+  environment?: string
+}): DeviceToken {
+  const environment = input.environment?.trim() || "sandbox"
+  const registeredAt = nowISO()
+  db()
+    .query(
+      `INSERT INTO device_tokens (device_token, environment, registered_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(device_token) DO UPDATE SET
+         environment = excluded.environment,
+         registered_at = excluded.registered_at`,
+    )
+    .run(input.deviceToken, environment, registeredAt)
+  return { deviceToken: input.deviceToken, environment, registeredAt }
+}
+
+/** Every registered device token, newest registration first. */
+export function listDeviceTokens(): DeviceToken[] {
+  const rows = db()
+    .query(
+      `SELECT device_token, environment, registered_at
+         FROM device_tokens ORDER BY registered_at DESC`,
+    )
+    .all() as Array<{
+    device_token: string
+    environment: string
+    registered_at: string
+  }>
+  return rows.map((r) => ({
+    deviceToken: r.device_token,
+    environment: r.environment,
+    registeredAt: r.registered_at,
+  }))
+}
+
+/** Count registered device tokens. Cheap status probe. */
+export function countDeviceTokens(): number {
+  const row = db()
+    .query("SELECT COUNT(*) AS n FROM device_tokens")
+    .get() as { n: number }
+  return row.n
 }

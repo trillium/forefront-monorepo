@@ -1,28 +1,15 @@
 {
   "version": 1,
-  "agent_id": "forge-agent-api",
+  "agent_id": "forge-apns-sender",
   "declared_at": "2026-07-09T00:00:00Z",
   "allowed_files": [
     { "path": ".claude-file-plan.json", "intent": "declare files this build creates/mutates" },
-    { "path": "Docs/DECISIONS.md", "intent": "record storage=bun:sqlite + agent-key auth decisions" },
-    { "path": "Docs/BACKEND_SERVER.md", "intent": "document new chat + agent surface and APNs gap" },
-    { "path": ".env", "intent": "add FOREFRONT_AGENT_TOKEN and FOREFRONT_DB_PATH dev defaults" },
-    { "path": ".gitignore", "intent": "ignore the sqlite .data/ store directory" },
-    { "path": "lib/store.ts", "intent": "bun:sqlite store: chats, messages, cards, cursors, idempotency, pushes" },
-    { "path": "lib/store.test.ts", "intent": "bun test unit coverage for the store ops" },
-    { "path": "lib/backend.ts", "intent": "add validateAgent + agent-key token export + unauthorized reuse" },
-    { "path": "lib/deck.ts", "intent": "wire getDeck/getVersion to store-curated cards with fixture fallback" },
-    { "path": "lib/chat.ts", "intent": "chat/message serialization helpers shared by routes" },
-    { "path": "app/chats/route.ts", "intent": "GET /chats consumer inbox (Bearer)" },
-    { "path": "app/chats/[id]/messages/route.ts", "intent": "GET+POST /chats/{id}/messages consumer (Bearer)" },
-    { "path": "app/agent/chats/route.ts", "intent": "POST /agent/chats create/ensure thread (agent key)" },
-    { "path": "app/agent/chats/[id]/messages/route.ts", "intent": "POST /agent/chats/{id}/messages author agent message (agent key)" },
-    { "path": "app/agent/cards/route.ts", "intent": "POST /agent/cards enqueue deck card (agent key)" },
-    { "path": "app/agent/cards/[id]/route.ts", "intent": "DELETE /agent/cards/{id} remove deck card (agent key)" },
-    { "path": "app/agent/inbox/route.ts", "intent": "GET /agent/inbox human read-back loop (agent key)" },
-    { "path": "app/agent/pushes/route.ts", "intent": "GET /agent/pushes actionable-push records (agent key)" },
-    { "path": "cli/forefront.ts", "intent": "DA-ergonomic CLI wrapping /agent/* verbs" },
-    { "path": "package.json", "intent": "add test script + forefront bin + bun:sqlite type support" },
-    { "path": "scripts/e2e.sh", "intent": "phase-6 end-to-end curl proof sequence" }
+    { "path": "lib/store.ts", "intent": "add device-token table + push sent-marker column and ops" },
+    { "path": "lib/apns.ts", "intent": "new ES256 JWT signer + HTTP/2 APNs sender, config-gated" },
+    { "path": "lib/apns.test.ts", "intent": "verify JWT crypto, payload shaping, unconfigured no-op" },
+    { "path": "app/push/register/route.ts", "intent": "persist device token instead of no-op label" },
+    { "path": "lib/backend.ts", "intent": "registerDevice persists token to the store" },
+    { "path": "cli/forefront.ts", "intent": "add push drain and push status verbs" },
+    { "path": ".env", "intent": "document APNS_* env vars with dev placeholders" }
   ]
 }

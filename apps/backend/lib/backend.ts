@@ -7,6 +7,8 @@
  * the routes don't.
  */
 
+import { upsertDeviceToken } from "@/lib/store"
+
 /**
  * The bearer token the server accepts. Env-sourced so real auth doesn't require
  * a code change; defaults to the fixed testing token. The onboarding payload
@@ -76,11 +78,20 @@ export function resolveEndpoint(): string {
 }
 
 /**
- * Register a device's APNs token. The seam for push: today a no-op that just
- * acknowledges; swap this body for a real registry/store without touching the
- * route. Returns a short label for the activity feed (never logs the token).
+ * Register a device's APNs token, persisting it so the push drain can target it
+ * (contract §5). Upserts on the token: a repeat registration refreshes the row
+ * rather than duplicating it. `environment` distinguishes a sandbox-minted token
+ * (dev builds, TestFlight) from a production one so the drain never blasts a
+ * sandbox token at the production gateway; it defaults to `sandbox`.
+ *
+ * Returns a short label for the activity feed and never logs the token itself.
  */
-export async function registerDevice(deviceToken: string): Promise<string> {
-  // No-op APNs for now — the app's launch-time poll is the source of truth.
-  return `Device token registered (${deviceToken.length} chars)`
+export async function registerDevice(
+  deviceToken: string,
+  environment?: string,
+): Promise<string> {
+  const trimmed = deviceToken.trim()
+  if (!trimmed) return "Device token registration skipped (empty token)"
+  const row = upsertDeviceToken({ deviceToken: trimmed, environment })
+  return `Device token registered (${trimmed.length} chars, ${row.environment})`
 }
