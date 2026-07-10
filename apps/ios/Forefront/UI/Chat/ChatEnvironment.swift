@@ -67,6 +67,15 @@ public final class ChatEnvironment {
         self.service = service
     }
 
+    /// Enter App Review demo mode: rebind to a `DemoChatService` that serves a
+    /// canned conversation exercising every v1 message kind, so a reviewer who
+    /// cannot join the tailnet still sees the full chat surface. Mirrors the
+    /// deck's demo-mode seam. Reloads the inbox from the demo seed.
+    public func enterDemoMode() async {
+        rebind(service: DemoChatService(store: store))
+        await loadInbox()
+    }
+
     // MARK: - Inbox
 
     public func loadInbox() async {

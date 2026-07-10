@@ -1,0 +1,56 @@
+{
+  "chat": {
+    "id": "demo_agent",
+    "title": "Your Agent",
+    "lastMessageAt": "2026-07-09T17:00:00Z",
+    "unreadCount": 1,
+    "lastMessagePreview": "Have you booked the flight yet?",
+    "topic": "reminders"
+  },
+  "messages": [
+    {
+      "id": "demo_1",
+      "chatId": "demo_agent",
+      "role": "agent",
+      "kind": "text",
+      "body": "Morning! Here's your day at a glance.",
+      "createdAt": "2026-07-09T16:00:00Z"
+    },
+    {
+      "id": "demo_2",
+      "chatId": "demo_agent",
+      "role": "user",
+      "kind": "text",
+      "body": "Thanks — what's urgent?",
+      "createdAt": "2026-07-09T16:01:40Z"
+    },
+    {
+      "id": "demo_3",
+      "chatId": "demo_agent",
+      "role": "agent",
+      "kind": "question",
+      "body": "Do you want me to draft the follow-up email?",
+      "createdAt": "2026-07-09T16:02:00Z",
+      "quickReplies": ["Yes, draft it", "Not now"]
+    },
+    {
+      "id": "demo_4",
+      "chatId": "demo_agent",
+      "role": "agent",
+      "kind": "linkToWebCard",
+      "body": "Fill in your travel details and I'll book it:",
+      "createdAt": "2026-07-09T16:30:00Z",
+      "webCardURL": "https://forefront.demo.local/forms/travel"
+    },
+    {
+      "id": "demo_5",
+      "chatId": "demo_agent",
+      "role": "agent",
+      "kind": "reminder",
+      "body": "Have you booked the flight yet? It's due by Friday.",
+      "createdAt": "2026-07-09T17:00:00Z",
+      "quickReplies": ["Booked it", "Snooze 1h", "Not yet"],
+      "reminder": { "dueAt": "2026-07-11T17:00:00Z" }
+    }
+  ]
+}
