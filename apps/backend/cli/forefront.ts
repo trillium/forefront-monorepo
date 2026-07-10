@@ -17,10 +17,20 @@
  *   forefront remind     <chatId> <text> --due <when> [--push]
  *   forefront inbox      [--since <cursor>]
  *   forefront pushes     [--since <cursor>]
+ *   forefront push drain
+ *   forefront push status
+ *
+ * `push drain`/`push status` run in-process against the same SQLite store the
+ * server writes (FOREFRONT_DB_PATH), not over HTTP — the drain is a server-side
+ * delivery operation, and reading the shared file DB is how a separate CLI
+ * process sees the records the server enqueued.
  *
  * Env:
  *   FOREFRONT_BASE_URL    default http://127.0.0.1:<PORT|9238>
  *   FOREFRONT_AGENT_TOKEN default dev-agent-token
+ *   FOREFRONT_DB_PATH     default .data/forefront.db (shared with the server)
+ *   APNS_KEY_PATH/APNS_KEY_ID/APNS_TEAM_ID/APNS_BUNDLE_ID/APNS_ENV — see
+ *     Docs/BACKEND_SERVER.md. Unset → push drain is a safe no-op.
  */
 
 const AGENT_TOKEN = process.env.FOREFRONT_AGENT_TOKEN ?? "dev-agent-token"
@@ -126,6 +136,8 @@ function usage(): never {
   remind     <chatId> <text...> --due <when> [--push]
   inbox      [--since <cursor>]
   pushes     [--since <cursor>]
+  push drain           send all pending actionable pushes via APNs
+  push status          show APNs configured?/device count/pending count
 
 Env: FOREFRONT_BASE_URL (${BASE_URL}), FOREFRONT_AGENT_TOKEN`,
   )
@@ -236,6 +248,56 @@ async function cmdPushes(args: ParsedArgs): Promise<void> {
   print(await call("GET", `/agent/pushes${q}`))
 }
 
+/**
+ * `push drain` / `push status` — the APNs delivery leg, run in-process against
+ * the shared SQLite store (not over HTTP). Imports lib/apns + lib/store lazily
+ * so the CLI's other verbs never pull in bun:sqlite.
+ */
+async function cmdPush(args: ParsedArgs): Promise<void> {
+  const [sub] = args.positionals
+  const { isConfigured, drainPushes, readConfig } = await import(
+    "@/lib/apns"
+  )
+  const { countDeviceTokens, countUnsentPushes } = await import("@/lib/store")
+
+  if (sub === "status") {
+    const cfg = readConfig()
+    print({
+      configured: isConfigured(),
+      environment: cfg?.environment ?? null,
+      bundleId: cfg?.bundleId ?? null,
+      keyConfigured: cfg !== null,
+      keyPresentOnDisk: isConfigured(),
+      registeredDevices: countDeviceTokens(),
+      pendingPushes: countUnsentPushes(),
+    })
+    if (!isConfigured()) {
+      console.error(
+        "\nℹ APNs is not configured — `push drain` is a safe no-op until you set\n" +
+          "  APNS_KEY_PATH / APNS_KEY_ID / APNS_TEAM_ID (see Docs/BACKEND_SERVER.md).",
+      )
+    }
+    return
+  }
+
+  if (sub === "drain") {
+    const summary = await drainPushes()
+    print(summary)
+    if (!summary.configured) {
+      console.error(
+        "\nℹ Not configured — records left pending. Set the APNs env and re-run.",
+      )
+    } else if (summary.deviceCount === 0) {
+      console.error(
+        "\nℹ No registered devices — records left pending until a device registers.",
+      )
+    }
+    return
+  }
+
+  fail("push: expected drain | status")
+}
+
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -258,6 +320,8 @@ async function main(): Promise<void> {
       return cmdInbox(args)
     case "pushes":
       return cmdPushes(args)
+    case "push":
+      return cmdPush(args)
     case "help":
     case "--help":
     case "-h":
