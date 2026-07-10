@@ -5,19 +5,23 @@ import Combine
 import ForefrontModels
 import ForefrontQueue
 
-/// Decides onboarding-vs-deck based on Keychain token presence.
+/// Decides onboarding-vs-app based on Keychain token presence. When authed the
+/// app is a tab bar: **Deck** (the reader) and **Chats** (the two-way agent
+/// channel). The two coexist (scope §1 / D-14).
 public struct AppRoot: View {
     @Environment(\.forefrontEnvironment) private var env
+    @Environment(\.forefrontChatEnvironment) private var chatEnv
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasToken: Bool = false
     @State private var didFirstRefresh = false
+    @State private var selectedTab: RootTab = .deck
 
     public init() {}
 
     public var body: some View {
         Group {
             if hasToken {
-                DeckScreen()
+                MainTabView(selectedTab: $selectedTab)
                     .environment(\.forefrontBearerToken, env.bearerToken)
             } else {
                 OnboardingView(
@@ -42,9 +46,57 @@ public struct AppRoot: View {
         // .automatic means F2's 30s guard suppresses rapid re-foregrounds; the
         // outcome routes through queue.adopt(...) — merge semantics only, so the
         // active card is never replaced by a foreground refresh (ISC-151).
+        //
+        // A foreground also drains the chat outbox: messages composed off-tailnet
+        // send on reconnect.
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active, hasToken else { return }
             Task { await env.performRefresh(trigger: .automatic) }
+            Task { await chatEnv.drainOutbox() }
+        }
+        // A deep-link from an actionable reminder push selects the Chats tab.
+        .onReceive(NotificationCenter.default.publisher(for: .forefrontOpenChat)) { note in
+            guard hasToken else { return }
+            selectedTab = .chats
+            if let chatId = note.userInfo?["chatId"] as? String {
+                Task { await chatEnv.openThread(chatId) }
+            }
+        }
+    }
+}
+
+/// The two top-level surfaces.
+public enum RootTab: Hashable, Sendable {
+    case deck
+    case chats
+}
+
+/// Broadcast when a notification tap should route into a chat. Posted by the
+/// AppDelegate's notification handlers; observed by `AppRoot` (deep-link, §11).
+public extension Notification.Name {
+    static let forefrontOpenChat = Notification.Name("forefront.openChat")
+}
+
+/// Deck | Chats tab bar. The Chats tab carries an unread badge driven by the
+/// chat environment's total unread.
+public struct MainTabView: View {
+    @Environment(\.forefrontChatEnvironment) private var chatEnv
+    @Binding var selectedTab: RootTab
+
+    public var body: some View {
+        TabView(selection: $selectedTab) {
+            DeckScreen()
+                .tabItem { Label("Deck", systemImage: "rectangle.stack") }
+                .tag(RootTab.deck)
+
+            ChatListView()
+                .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
+                .tag(RootTab.chats)
+                .badge(chatEnv.totalUnread)
+        }
+        .task {
+            // Warm the inbox so the badge is correct before the user opens Chats.
+            await chatEnv.loadInbox()
         }
     }
 }

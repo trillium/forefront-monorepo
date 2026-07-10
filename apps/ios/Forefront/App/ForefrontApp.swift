@@ -14,6 +14,7 @@ public struct ForefrontApp: App {
         WindowGroup {
             AppRoot()
                 .environment(\.forefrontEnvironment, AppEnvironment.shared)
+                .environment(\.forefrontChatEnvironment, ChatEnvironment.shared)
         }
     }
 }
