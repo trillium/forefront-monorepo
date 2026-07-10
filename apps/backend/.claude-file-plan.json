@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "agent_id": "forge-apns-sender",
+  "declared_at": "2026-07-09T00:00:00Z",
+  "allowed_files": [
+    { "path": ".claude-file-plan.json", "intent": "declare files this build creates/mutates" },
+    { "path": "lib/store.ts", "intent": "add device-token table + push sent-marker column and ops" },
+    { "path": "lib/apns.ts", "intent": "new ES256 JWT signer + HTTP/2 APNs sender, config-gated" },
+    { "path": "lib/apns.test.ts", "intent": "verify JWT crypto, payload shaping, unconfigured no-op" },
+    { "path": "app/push/register/route.ts", "intent": "persist device token instead of no-op label" },
+    { "path": "lib/backend.ts", "intent": "registerDevice persists token to the store" },
+    { "path": "cli/forefront.ts", "intent": "add push drain and push status verbs" },
+    { "path": ".env", "intent": "document APNS_* env vars with dev placeholders" }
+  ]
+}
