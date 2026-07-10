@@ -1,0 +1,35 @@
+## Build artifacts
+.build/
+.swiftpm/
+DerivedData/
+DerivedData-device/
+build/
+
+## Generated Xcode project (source of truth is project.yml)
+*.xcodeproj/
+
+## Xcode user state
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad/
+*.xccheckout
+*.moved-aside
+
+## macOS
+.DS_Store
+
+## Swift Package Manager
+Package.resolved
+
+## App-specific
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Local device credentials (gitignored — write these yourself)
+.team-id
+.device-id
+
+## Tooling
+*.log
+.tmp/

@@ -1,0 +1,9 @@
+{
+  "name": "forefront",
+  "version": "1.0.0",
+  "scripts": {
+    "phone": "Scripts/install-phone.sh",
+    "server": "cd ../forefront-backend && bun run dev",
+    "backend": "Scripts/backend"
+  }
+}

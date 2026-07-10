@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+# Launch the Forefront backend (Next.js 16) for on-device testing.
+# See Docs/BACKEND_SERVER.md for full details.
+
+echo "🚀 Forefront backend (Next.js 16)"
+cd ~/code/forefront-backend
+
+echo "▶️  Starting on the tailnet — dashboard + API + QR onboarding"
+bun run dev &
+BACKEND_PID=$!
+
+echo ""
+echo "✅ Backend running (PID $BACKEND_PID)"
+echo "   Dashboard: http://localhost:9238/"
+echo "   Tailnet:   http://100.74.138.74:9238"
+echo ""
+echo "📱 On your iPhone (Tailscale connected):"
+echo "  1. Open Forefront → Scan QR"
+echo "  2. Point at the QR on the dashboard"
+echo ""
+echo "Press Ctrl+C to stop."
+trap "kill $BACKEND_PID 2>/dev/null; echo ''; echo 'Stopped.'; exit 0" INT
+wait
