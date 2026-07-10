@@ -129,6 +129,69 @@ export interface AgentSend {
 }
 
 /**
+ * Normalize a reminder due-time to ISO-8601 (what the iOS client decodes as a
+ * `Date`), or null if it can't be understood. `dueAt` is advisory display text —
+ * dropping an unparseable value is far better than storing a raw string like
+ * "tomorrow 5pm", which fails the client's `.iso8601` Date decode and breaks the
+ * ENTIRE thread's message sync (one bad field kills the whole `/messages` fetch).
+ * Accepts ISO-8601 as-is, plus common forms: "in 30 min", "in 1 hour",
+ * "in 2 days", "today"/"tomorrow" (+ optional "5pm"), and weekday names.
+ */
+export function normalizeDueAt(input: string, now: Date = new Date()): string | null {
+  const s = input.trim().toLowerCase()
+  if (!s) return null
+
+  // Already a date the engine understands and looks date-shaped (ISO-8601 etc.).
+  const direct = new Date(input)
+  if (!Number.isNaN(direct.getTime()) && /\d{4}-\d{2}-\d{2}/.test(input)) {
+    return direct.toISOString()
+  }
+
+  const UNIT = { min: 60_000, hour: 3_600_000, day: 86_400_000 }
+  const parseClock = (str: string): { h: number; m: number } | null => {
+    const t = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/)
+    if (!t) return null
+    let h = parseInt(t[1], 10)
+    if (t[3] === "pm" && h < 12) h += 12
+    if (t[3] === "am" && h === 12) h = 0
+    return { h, m: t[2] ? parseInt(t[2], 10) : 0 }
+  }
+
+  let mt = s.match(/^in\s+(\d+)\s*(min(?:ute)?s?|h(?:ou)?rs?|days?)$/)
+  if (mt) {
+    const n = parseInt(mt[1], 10)
+    const unit = mt[2].startsWith("d") ? UNIT.day : mt[2].startsWith("h") ? UNIT.hour : UNIT.min
+    return new Date(now.getTime() + n * unit).toISOString()
+  }
+
+  mt = s.match(/^(today|tomorrow)(?:\s+(.+))?$/)
+  if (mt) {
+    const d = new Date(now)
+    if (mt[1] === "tomorrow") d.setDate(d.getDate() + 1)
+    const clock = mt[2] ? parseClock(mt[2]) : null
+    d.setHours(clock?.h ?? 9, clock?.m ?? 0, 0, 0)
+    return d.toISOString()
+  }
+
+  const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+  mt = s.match(/^(?:next\s+)?(\w+day)(?:\s+(.+))?$/)
+  if (mt) {
+    const target = DAYS.indexOf(mt[1])
+    if (target >= 0) {
+      const d = new Date(now)
+      let delta = (target - d.getDay() + 7) % 7
+      if (delta === 0) delta = 7 // the NEXT occurrence, not today
+      d.setDate(d.getDate() + delta)
+      const clock = mt[2] ? parseClock(mt[2]) : null
+      d.setHours(clock?.h ?? 9, clock?.m ?? 0, 0, 0)
+      return d.toISOString()
+    }
+  }
+
+  return null // unparseable → drop (advisory only; never ship a non-ISO string)
+}
+
+/**
  * Validate a `POST /agent/chats/{id}/messages` body. Agents may author any of
  * the four kinds; kind-specific fields are validated against the kind.
  */
@@ -183,7 +246,9 @@ export function parseAgentSend(
     if (!due) {
       return { ok: false, error: "dueAt is required for reminder" }
     }
-    reminderDueAt = due
+    // Normalize to ISO-8601 (or null if unparseable) — never store a raw string
+    // like "tomorrow 5pm", which breaks the client's Date decode.
+    reminderDueAt = normalizeDueAt(due)
   }
 
   const push = b.push === true
