@@ -1,0 +1,12 @@
+{
+  "name": "forefront-monorepo",
+  "private": true,
+  "workspaces": ["apps/backend", "apps/docs"],
+  "scripts": {
+    "dev:backend": "bun run --cwd apps/backend dev",
+    "dev:docs": "bun run --cwd apps/docs dev",
+    "build:backend": "bun run --cwd apps/backend build",
+    "build:docs": "bun run --cwd apps/docs build",
+    "lint": "bun run --filter '*' lint"
+  }
+}
