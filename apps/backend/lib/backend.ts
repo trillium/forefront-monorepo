@@ -14,13 +14,37 @@
  */
 export const expectedBearerToken = process.env.BACKEND_TOKEN ?? "test-token"
 
+/**
+ * The agent key authorizing the `/agent/*` producer surface — the DA, not the
+ * phone. Strictly more privileged than the device bearer: it authors
+ * `agent`/`system` messages, curates the deck, and reads the human read-back
+ * inbox. Env-sourced with a dev default; change it in any shared deployment.
+ * See Docs/DECISIONS.md B-02.
+ */
+export const expectedAgentToken =
+  process.env.FOREFRONT_AGENT_TOKEN ?? "dev-agent-token"
+
+/** Parse a `Bearer <token>` header into its token, or null if malformed. */
+function bearerToken(req: Request): string | null {
+  const auth = req.headers.get("authorization")
+  if (!auth) return null
+  const parts = auth.split(" ")
+  if (parts.length !== 2 || parts[0] !== "Bearer") return null
+  return parts[1] ?? null
+}
+
 /** Extract and validate `Authorization: Bearer <token>` from a request. */
 export function validateBearer(req: Request): boolean {
-  const auth = req.headers.get("authorization")
-  if (!auth) return false
-  const parts = auth.split(" ")
-  if (parts.length !== 2 || parts[0] !== "Bearer") return false
-  return parts[1] === expectedBearerToken
+  return bearerToken(req) === expectedBearerToken
+}
+
+/**
+ * Validate the agent key on `/agent/*`. The device bearer token is deliberately
+ * NOT accepted here — a compromised phone token must never be able to forge
+ * agent messages or reorder the deck (B-02).
+ */
+export function validateAgent(req: Request): boolean {
+  return bearerToken(req) === expectedAgentToken
 }
 
 /** Standard 401 body used across bearer-protected endpoints. */
