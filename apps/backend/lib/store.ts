@@ -13,9 +13,25 @@
  * cross-thread agent inbox. See Docs/DECISIONS.md B-01/B-03.
  */
 
-import { Database } from "bun:sqlite"
+import type { Database } from "bun:sqlite"
 import { mkdirSync } from "node:fs"
 import { dirname, isAbsolute, resolve } from "node:path"
+
+/**
+ * Lazily resolve the `bun:sqlite` `Database` class.
+ *
+ * `next build` collects page data under **Node**, where `bun:sqlite` does not
+ * exist — a top-level `import { Database } from "bun:sqlite"` would crash the
+ * build the moment this module is imported, even though no DB is ever opened at
+ * build time. A dynamic `require` inside the open path keeps the module
+ * importable under Node (build) while still binding the real driver at request
+ * time under Bun (`bun run dev`/`start`). See Docs/DECISIONS.md B-01.
+ */
+function loadDatabaseClass(): typeof Database {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require("bun:sqlite") as { Database: typeof Database }
+  return mod.Database
+}
 
 // ── Domain types (shapes mirror Docs/BACKEND_CONTRACT.md §8–12) ──────────────
 
@@ -100,12 +116,34 @@ export function openDatabase(path: string): Database {
     // Ensure the parent dir exists — bun:sqlite won't create it.
     mkdirSync(dirname(path), { recursive: true })
   }
-  const db = new Database(path)
+  const DatabaseClass = loadDatabaseClass()
+  const db = new DatabaseClass(path)
   // WAL keeps concurrent route-handler reads from blocking on a write.
   db.exec("PRAGMA journal_mode = WAL")
   db.exec("PRAGMA foreign_keys = ON")
   migrate(db)
+  seedDefaults(db)
   return db
+}
+
+/** The always-present default thread. The inbox is never a dead end (§8). */
+export const DEFAULT_CHAT_ID = "ch_general"
+const DEFAULT_CHAT_TITLE = "Agent"
+
+/**
+ * Seed the well-known default thread so `GET /chats` always returns somewhere
+ * the human can write, even before the agent has initiated any conversation.
+ * Idempotent — INSERT OR IGNORE leaves an existing thread untouched.
+ */
+function seedDefaults(db: Database): void {
+  const ts = nowISO()
+  db.query(
+    `INSERT OR IGNORE INTO chats (id, title, topic, created_at, last_message_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(DEFAULT_CHAT_ID, DEFAULT_CHAT_TITLE, "general", ts, ts)
+  db.query("INSERT OR IGNORE INTO unread (chat_id, count) VALUES (?, 0)").run(
+    DEFAULT_CHAT_ID,
+  )
 }
 
 /** Create tables if absent. Idempotent — safe to run on every open. */
@@ -116,8 +154,13 @@ function migrate(db: Database): void {
       title          TEXT NOT NULL,
       topic          TEXT,
       created_at     TEXT NOT NULL,
-      last_message_at TEXT NOT NULL
+      last_message_at TEXT NOT NULL,
+      client_chat_id TEXT           -- idempotency key for human-started threads
     );
+
+    -- Human-started threads dedup on client_chat_id (offline-retry safe).
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_chats_client_dedup
+      ON chats(client_chat_id) WHERE client_chat_id IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS messages (
       seq              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -297,6 +340,69 @@ export function ensureChat(input: {
     .run(id, title, topic, ts, ts)
   database.query("INSERT INTO unread (chat_id, count) VALUES (?, 0)").run(id)
   return { id, title, topic, createdAt: ts, lastMessageAt: ts }
+}
+
+/**
+ * Create a human-started thread idempotently on `clientChatId` (contract-style
+ * offline-retry key, mirrors message `clientMessageId`). A repeat returns the
+ * already-created thread. `created` is false on a dedup hit so the route can
+ * pick 200 vs 201. This is human-initiated conversation — distinct from the
+ * agent-initiated `ensureChat` path used by `POST /agent/chats`.
+ */
+export function createHumanChat(input: {
+  clientChatId: string
+  title?: string
+}): { chat: Chat; created: boolean } {
+  const database = db()
+  const existing = findChatByClientId(input.clientChatId)
+  if (existing) return { chat: existing, created: false }
+
+  const id = randomId("ch_")
+  const title = input.title?.trim() || "New Chat"
+  const ts = nowISO()
+  try {
+    database
+      .query(
+        `INSERT INTO chats (id, title, topic, created_at, last_message_at, client_chat_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(id, title, null, ts, ts, input.clientChatId)
+    database.query("INSERT INTO unread (chat_id, count) VALUES (?, 0)").run(id)
+    return {
+      chat: { id, title, topic: null, createdAt: ts, lastMessageAt: ts },
+      created: true,
+    }
+  } catch (err) {
+    // Lost a race on the unique index — return the winner.
+    const raced = findChatByClientId(input.clientChatId)
+    if (raced) return { chat: raced, created: false }
+    throw err
+  }
+}
+
+/** Look up a thread by its human idempotency key. */
+export function findChatByClientId(clientChatId: string): Chat | null {
+  const row = db()
+    .query(
+      "SELECT id, title, topic, created_at, last_message_at FROM chats WHERE client_chat_id = ?",
+    )
+    .get(clientChatId) as
+    | {
+        id: string
+        title: string
+        topic: string | null
+        created_at: string
+        last_message_at: string
+      }
+    | null
+  if (!row) return null
+  return {
+    id: row.id,
+    title: row.title,
+    topic: row.topic,
+    createdAt: row.created_at,
+    lastMessageAt: row.last_message_at,
+  }
 }
 
 /** Fetch one thread by id, or null. */

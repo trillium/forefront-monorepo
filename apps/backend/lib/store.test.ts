@@ -12,6 +12,8 @@ import {
   appendUserMessageIdempotent,
   bumpDeckVersion,
   clearUnread,
+  createHumanChat,
+  DEFAULT_CHAT_ID,
   deleteCard,
   ensureChat,
   enqueuePush,
@@ -45,8 +47,8 @@ describe("chats", () => {
     expect(b.id).toBe(a.id)
     expect(b.title).toBe("Renamed")
     expect(b.topic).toBe("questions")
-    // Only one chat exists.
-    expect(listChats().length).toBe(1)
+    // Only one non-default chat exists (ch_general is always seeded).
+    expect(listChats().filter((c) => c.id !== DEFAULT_CHAT_ID).length).toBe(1)
   })
 
   test("ensureChat on existing id without fields preserves them", () => {
@@ -67,6 +69,40 @@ describe("chats", () => {
     expect(chats[0]!.lastMessagePreview).toBe("new msg")
     expect(chats[0]!.unreadCount).toBe(1)
     expect(chats[1]!.id).toBe("ch_old")
+  })
+})
+
+describe("default thread + human-started chats", () => {
+  test("ch_general is seeded and always present", () => {
+    expect(getChat(DEFAULT_CHAT_ID)).not.toBeNull()
+    // GET /chats is never a dead end: at least the default thread is listed.
+    expect(listChats().some((c) => c.id === DEFAULT_CHAT_ID)).toBe(true)
+  })
+
+  test("createHumanChat is idempotent on clientChatId", () => {
+    const first = createHumanChat({ clientChatId: "cc-1", title: "Trip planning" })
+    expect(first.created).toBe(true)
+    expect(first.chat.title).toBe("Trip planning")
+
+    const repeat = createHumanChat({ clientChatId: "cc-1", title: "Different" })
+    expect(repeat.created).toBe(false)
+    expect(repeat.chat.id).toBe(first.chat.id)
+    // Title is the originally-created one, not the retry's.
+    expect(repeat.chat.title).toBe("Trip planning")
+  })
+
+  test("unsolicited human message to ch_general surfaces in the agent inbox", () => {
+    // No agent-initiated conversation — human just writes to the default thread.
+    appendUserMessageIdempotent({
+      chatId: DEFAULT_CHAT_ID,
+      body: "hey, can you help me?",
+      clientMessageId: "unsolicited-1",
+    })
+    const inbox = getInbox(null)
+    expect(inbox.messages.map((m) => m.body)).toContain("hey, can you help me?")
+    expect(inbox.messages.find((m) => m.body === "hey, can you help me?")!.chatId).toBe(
+      DEFAULT_CHAT_ID,
+    )
   })
 })
 
