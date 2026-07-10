@@ -95,6 +95,15 @@ targets:
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_FILE: Forefront/Resources/Info.plist
+    # Push Notifications capability (was dropped in ddf85fc during a signing fix).
+    # `development` = APNs sandbox, which is what a dev-signed install-phone.sh
+    # build uses; switch to `production` for TestFlight/App Store. Requires the
+    # paid Developer Program (present) + Push enabled on the App ID (automatic
+    # signing manages this).
+    entitlements:
+      path: Forefront/Resources/Forefront.entitlements
+      properties:
+        aps-environment: development
 
   # ── Unit-test bundle ──────────────────────────────────────────────────────────
 
