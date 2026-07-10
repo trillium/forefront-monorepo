@@ -39,4 +39,23 @@ final class LiveShapeTests: XCTestCase {
         XCTAssertNotNil(page.messages.first { $0.kind == .reminder }?.reminder?.dueAt)
         XCTAssertNotNil(page.nextCursor)
     }
+
+    /// One un-decodable message (a non-ISO `reminder.dueAt`) must NOT fail the
+    /// whole page — the good messages still decode. This is the resilience that
+    /// keeps a single bad producer message from blanking an entire thread.
+    func testMessagePageSkipsUndecodableMessage() throws {
+        let json = """
+        { "messages": [
+            { "id": "m_ok", "chatId": "c", "role": "agent", "kind": "text",
+              "body": "hello", "createdAt": "2026-07-09T18:00:00Z" },
+            { "id": "m_bad", "chatId": "c", "role": "agent", "kind": "reminder",
+              "body": "bad", "createdAt": "2026-07-09T18:00:00Z",
+              "reminder": { "dueAt": "tomorrow 5pm" } }
+        ], "nextCursor": "c_9" }
+        """
+        let page = try iso().decode(MessagePage.self, from: Data(json.utf8))
+        XCTAssertEqual(page.messages.count, 1)         // the bad one is skipped, not fatal
+        XCTAssertEqual(page.messages.first?.id, "m_ok")
+        XCTAssertEqual(page.nextCursor, "c_9")
+    }
 }

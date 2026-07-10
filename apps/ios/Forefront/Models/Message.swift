@@ -159,6 +159,29 @@ public struct MessagePage: Codable, Sendable, Equatable {
         self.messages = messages
         self.nextCursor = nextCursor
     }
+
+    private enum CodingKeys: String, CodingKey { case messages, nextCursor }
+
+    /// Lossy decode: each message is decoded independently, and any single
+    /// un-decodable message (e.g. a malformed `reminder.dueAt` from a buggy
+    /// producer) is SKIPPED rather than failing the entire thread's sync. One
+    /// bad message must never blank the whole conversation.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.nextCursor = try c.decodeIfPresent(String.self, forKey: .nextCursor)
+        let wrapped = try c.decode([FailableMessage].self, forKey: .messages)
+        self.messages = wrapped.compactMap(\.value)
+    }
+}
+
+/// A decode wrapper whose init never throws — a failed element becomes `nil`
+/// instead of aborting the surrounding array decode. Enables `MessagePage`'s
+/// lossy, resilient message decoding.
+private struct FailableMessage: Decodable {
+    let value: Message?
+    init(from decoder: Decoder) throws {
+        value = try? Message(from: decoder)
+    }
 }
 
 /// The body of a `POST /chats/{id}/messages` send. `clientMessageId` is the
