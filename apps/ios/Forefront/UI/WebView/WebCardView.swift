@@ -18,6 +18,12 @@ public struct WebCardView: View {
             WebViewRepresentable(url: url, bearerToken: bearerToken, onError: { msg in
                 loadError = msg
             })
+            // CRITICAL: tie the web view's identity to the URL. Without this,
+            // SwiftUI reuses ONE WKWebView across every card (updateUIView is a
+            // no-op), so all cards show whatever loaded first. `.id(url)` forces a
+            // fresh, correctly-loaded web view per card (and its own isolated data
+            // store — ISC-69).
+            .id(url)
             if let loadError {
                 VStack(spacing: 8) {
                     Image(systemName: "wifi.exclamationmark")
