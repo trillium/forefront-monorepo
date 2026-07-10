@@ -155,6 +155,22 @@ public struct DeckScreen: View {
                 }
             }
         }
+        // Deck navigation flanking the Deck|Chats tab bar: cards are interactive
+        // (scroll/links), so card-to-card movement is by these buttons, not a
+        // swipe. Previous = undo (back), Next = advance.
+        .overlay(alignment: .bottom) {
+            HStack {
+                deckNavButton(system: "chevron.backward", disabled: env.queue.history.isEmpty) {
+                    withAnimation(.easeInOut(duration: 0.22)) { env.queue.undo() }
+                }
+                Spacer()
+                deckNavButton(system: "chevron.forward", disabled: env.queue.active == nil) {
+                    withAnimation(.easeInOut(duration: 0.22)) { env.queue.advance() }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
+        }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
@@ -194,6 +210,23 @@ public struct DeckScreen: View {
             let days = Int(interval / 86400)
             return "\(days)d ago"
         }
+    }
+
+    /// A circular deck-navigation button (Previous / Next), dimmed when disabled.
+    @ViewBuilder
+    private func deckNavButton(
+        system: String,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: system)
+                .font(.title3.weight(.semibold))
+                .frame(width: 50, height: 50)
+                .background(.thinMaterial, in: Circle())
+        }
+        .disabled(disabled)
+        .opacity(disabled ? 0.35 : 1)
     }
 }
 

@@ -24,15 +24,10 @@ public struct WebViewRepresentable: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.allowsLinkPreview = false
-        // The deck is a Tinder/Bumble-style swipe surface, and those cards are
-        // pure swipe units — no scroll, no tap on the card itself. WKWebView's
-        // touch handling (scroll pan especially) otherwise competes with the
-        // parent DragGesture and makes slow drags feel fought-over. So make the
-        // web content fully non-interactive: every touch flows to the card's
-        // DragGesture, guaranteeing a clean swipe. (Tap-to-open a card is a
-        // deliberate future gesture, not incidental webview interaction.)
-        webView.isUserInteractionEnabled = false
-        webView.scrollView.isScrollEnabled = false
+        // Cards are FULLY interactive: the user scrolls the page and follows
+        // links. Card-to-card navigation is via the deck's Next/Previous controls
+        // (not a swipe, which would fight the card's own scrolling), so the web
+        // content owns every touch here.
         // ISC-73: do NOT enable arbitrary file URL access. The default is false.
         var request = URLRequest(url: url)
         if let bearerToken, !bearerToken.isEmpty {

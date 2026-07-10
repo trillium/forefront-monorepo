@@ -84,7 +84,10 @@ struct ChatRow: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
-                Text(chat.lastMessageAt, style: .relative)
+                // A compact, single-unit relative time computed at render — NOT
+                // SwiftUI's `.relative` style, which ticks every second ("19 min,
+                // 52 sec") and is distracting in a list.
+                Text(shortRelative(chat.lastMessageAt))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 if chat.unreadCount > 0 {
@@ -98,6 +101,15 @@ struct ChatRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Compact relative time — one unit, no seconds: "now", "5m", "3h", "2d".
+    private func shortRelative(_ date: Date, now: Date = Date()) -> String {
+        let s = now.timeIntervalSince(date)
+        if s < 60 { return "now" }
+        if s < 3600 { return "\(Int(s / 60))m" }
+        if s < 86400 { return "\(Int(s / 3600))h" }
+        return "\(Int(s / 86400))d"
     }
 }
 #endif

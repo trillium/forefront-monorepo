@@ -3,14 +3,13 @@ import SwiftUI
 import ForefrontModels
 import ForefrontQueue
 
-/// The swipeable deck. ZStack of cards with `zIndex` decreasing from front to back.
-/// A horizontal drag past the threshold advances to the next card.
+/// The card deck: a stack of cards with the active one on top. Cards are FULLY
+/// interactive (scroll + follow links); card-to-card navigation is via the deck
+/// screen's Next/Previous controls — NOT a swipe, which would fight the card's
+/// own scrolling. `zIndex` decreases front→back for the peek effect.
 public struct CardStackView: View {
     @Bindable public var model: StackQueueModel
-    @State private var dragOffset: CGSize = .zero
 
-    /// Fraction of screen width that counts as a "completed" swipe.
-    private let advanceThreshold: CGFloat = 0.25
     /// How many cards behind the active one to render for the peek effect.
     private let peekDepth = 2
 
@@ -19,121 +18,49 @@ public struct CardStackView: View {
     }
 
     public var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                // Background peek cards (queue[0], queue[1]) — render bottom-up.
-                ForEach(Array(model.queue.prefix(peekDepth).enumerated().reversed()), id: \.element.id) { pair in
-                    let depth = pair.offset + 1
-                    peekCard(card: pair.element, depth: depth)
-                }
-
-                // Active card on top.
-                if let active = model.active {
-                    CardView(card: active)
-                        .overlay(alignment: .bottom) {
-                            // ISC-152: "N of M" over the active card. Derived from
-                            // the model's generation counter (deckPosition) and
-                            // the live deck size (deckTotal). Purely decorative —
-                            // never intercepts touch on the web content (ISC-157).
-                            DeckPositionIndicator(
-                                position: model.deckPosition,
-                                total: model.deckTotal
-                            )
-                        }
-                        // Track the finger in BOTH axes (not just x) and tilt as it
-                        // moves — the physical "card in hand" feel.
-                        .offset(dragOffset)
-                        .rotationEffect(.degrees(Double(dragOffset.width) / 16))
-                        .zIndex(Double(peekDepth + 1))
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    dragOffset = value.translation
-                                }
-                                .onEnded { value in
-                                    // Tinder/Bumble feel: commit on DISTANCE *or* VELOCITY.
-                                    // `predictedEndTranslation` projects where a flick would
-                                    // land, so a fast short flick throws the card the same as
-                                    // a slow long drag — a slow under-threshold drag just
-                                    // rubber-bands back and stays put.
-                                    let width = geo.size.width
-                                    let distance = value.translation.width
-                                    let projected = value.predictedEndTranslation.width
-                                    let committed = abs(distance) > width * advanceThreshold
-                                        || abs(projected) > width * 0.5
-                                    if committed {
-                                        let dir: CGFloat = distance > 0 ? 1 : -1
-                                        // Fly off ALONG the finger's trajectory (keep the
-                                        // vertical component), not dead-straight sideways.
-                                        withAnimation(.easeOut(duration: 0.22)) {
-                                            dragOffset = CGSize(
-                                                width: dir * width * 1.6,
-                                                height: value.translation.height
-                                                    + value.predictedEndTranslation.height * 0.25
-                                            )
-                                        }
-                                        Task { @MainActor in
-                                            try? await Task.sleep(nanoseconds: 200_000_000)
-                                            model.advance()
-                                            dragOffset = .zero
-                                        }
-                                    } else {
-                                        // Rubber-band back to rest — and stay there.
-                                        withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.72)) {
-                                            dragOffset = .zero
-                                        }
-                                    }
-                                }
-                        )
-                        .transition(.identity)
-                } else if model.queue.isEmpty {
-                    EmptyDeckView(
-                        canReview: !model.history.isEmpty,
-                        onReview: {
-                            withAnimation(.spring(response: 0.35)) { model.restart() }
-                        }
-                    )
-                }
-
-                // ISC-158: undo button — visible when swipe history exists.
-                if !model.history.isEmpty {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Button {
-                                withAnimation(.spring(response: 0.3)) { model.undo() }
-                            } label: {
-                                Image(systemName: "arrow.uturn.backward.circle.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.leading, 24)
-                                    .padding(.bottom, 40)
-                            }
-                            Spacer()
-                        }
-                    }
-                    .zIndex(Double(peekDepth + 2))
-                }
+        ZStack {
+            // Background peek cards (queue[0], queue[1]) — render bottom-up.
+            ForEach(Array(model.queue.prefix(peekDepth).enumerated().reversed()), id: \.element.id) { pair in
+                let depth = pair.offset + 1
+                peekCard(card: pair.element, depth: depth)
             }
-            // ISC-155: fire haptic feedback on card advance. Uses the iOS 17
-            // SwiftUI `.sensoryFeedback` API (preferred over UIImpactFeedback-
-            // Generator). Triggered by `seenThisGeneration`, which increments
-            // exactly once per committed advance — so a merge/arrival that grows
-            // the deck does NOT buzz, only a real swipe does.
-            .sensoryFeedback(.impact(weight: .light), trigger: model.seenThisGeneration)
+
+            // Active card on top — interactive. `.id(active.id)` ties it to the
+            // card so a Next/Previous tap cross-fades to a fresh card (and reloads
+            // its page). The card owns all touch, so nothing here intercepts it.
+            if let active = model.active {
+                CardView(card: active)
+                    .overlay(alignment: .bottom) {
+                        // ISC-152: "N of M" over the active card, from the model's
+                        // generation counter + live deck size. Decorative — never
+                        // intercepts touch on the web content (ISC-157).
+                        DeckPositionIndicator(
+                            position: model.deckPosition,
+                            total: model.deckTotal
+                        )
+                    }
+                    .zIndex(Double(peekDepth + 1))
+                    .id(active.id)
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            } else if model.queue.isEmpty {
+                EmptyDeckView(
+                    canReview: !model.history.isEmpty,
+                    onReview: {
+                        withAnimation(.spring(response: 0.35)) { model.restart() }
+                    }
+                )
+            }
         }
+        // ISC-155: haptic on a committed advance (from a Next tap). Triggered by
+        // `seenThisGeneration`, which increments exactly once per advance — a
+        // merge/arrival that grows the deck does NOT buzz.
+        .sensoryFeedback(.impact(weight: .light), trigger: model.seenThisGeneration)
     }
 
     private func peekCard(card: Card, depth: Int) -> some View {
-        // As the top card is dragged away, the NEAREST peek card (depth 1) rises
-        // toward the active slot — the deck "comes forward" (Tinder feel). Deeper
-        // cards hold their resting offset.
-        let progress = depth == 1 ? min(abs(dragOffset.width) / 120, 1) : 0
-        let scale = (1.0 - 0.05 * CGFloat(depth)) + 0.05 * progress
-        let yOffset = 12 * CGFloat(depth) - 12 * progress
-        return CardView(card: card)
-            .scaleEffect(scale)
-            .offset(y: yOffset)
+        CardView(card: card)
+            .scaleEffect(1.0 - 0.05 * CGFloat(depth))
+            .offset(y: 12 * CGFloat(depth))
             .zIndex(Double(peekDepth - depth))
             .allowsHitTesting(false)
     }
