@@ -22,6 +22,12 @@ const nav = [
       { label: "QR Setup", href: "/onboarding/qr" },
     ],
   },
+  {
+    section: "Agent API",
+    links: [
+      { label: "Overview", href: "/agent/overview" },
+    ],
+  },
 ];
 
 export function Sidebar() {
