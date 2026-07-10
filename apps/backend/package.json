@@ -6,7 +6,8 @@
     "dev": "dotenv -e .env -- next dev -H 0.0.0.0",
     "build": "next build",
     "start": "dotenv -e .env -- next start -H 0.0.0.0",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "bun test lib/"
   },
   "dependencies": {
     "next": "16.2.10",
