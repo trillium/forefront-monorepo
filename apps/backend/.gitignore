@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# sqlite chat/deck store (see lib/store.ts, FOREFRONT_DB_PATH)
+/.data
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
