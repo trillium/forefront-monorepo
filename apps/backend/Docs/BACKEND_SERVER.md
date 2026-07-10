@@ -42,7 +42,7 @@ or reorder the deck. See `Docs/DECISIONS.md` B-02.
 | ------ | ---------------------- | ---- | -------------------------------------------------- |
 | `GET`  | `/stack/last-updated`  | ✅   | Cheap version probe. `{ "version": "1" }`          |
 | `GET`  | `/stack`               | ✅   | Full ordered deck. Agent-curated cards, else the demo fixtures |
-| `POST` | `/push/register`       | ✅   | Device-token sink (no-op APNs)                     |
+| `POST` | `/push/register`       | ✅   | Persist device token `{ deviceToken, environment? }` → 200 |
 
 ### Chat — consumer (device bearer) — contract §8–10
 
@@ -67,7 +67,7 @@ a dead end. Unsolicited messages there surface in the agent inbox.
 | `POST`   | `/agent/cards`                | Enqueue/update a deck card `{ id?, url, title, priority?, type?, ttl? }`; bumps deck version |
 | `DELETE` | `/agent/cards/{id}`           | Remove a card; bumps deck version (404 if unknown)            |
 | `GET`    | `/agent/inbox?since=`         | **Read-back loop:** every human (`user`) message across all threads since a cursor. Closes agent-asks → human-answers → agent-reads |
-| `GET`    | `/agent/pushes?since=`        | The actionable-push queue (see APNs gap below)                 |
+| `GET`    | `/agent/pushes?since=`        | The actionable-push queue + delivery state (see APNs push below) |
 
 ### Dashboard (no auth, local only)
 
@@ -88,24 +88,64 @@ bun run cli/forefront.ts ask ch_reminders "Booked the flight?" --replies "Booked
 bun run cli/forefront.ts remind ch_reminders "Pay the deposit" --due 2026-07-11T17:00:00Z --push
 bun run cli/forefront.ts inbox  [--since <cursor>]
 bun run cli/forefront.ts pushes [--since <cursor>]
+bun run cli/forefront.ts push status   # APNs configured? / devices / pending
+bun run cli/forefront.ts push drain     # deliver pending pushes via APNs
 ```
 
-## APNs gap (deliberate, out of scope)
+## APNs push (the delivery leg)
 
-**Actual APNs *sending* is NOT implemented** — it needs a signed APNs auth key,
-the app's topic, and a production entitlement, none of which exist in a fixture
-backend. Instead:
+The delivery leg is **built and config-gated** (`lib/apns.ts`). Every
+`reminder`/`question` authored with `push: true` persists an actionable-push
+record (category `FF_REMINDER` / `FF_QUESTION`, body, quick-reply labels),
+readable at `GET /agent/pushes`. `forefront push drain` reads the unsent records,
+signs a provider JWT, and POSTs each to Apple over HTTP/2 for every registered
+device token (tokens arrive via `POST /push/register` and persist in SQLite),
+then marks each record sent with its per-device APNs result. The **iOS side
+already handles receipt** (contract §11).
 
-- Every `reminder`/`question` authored with `push: true` **persists an
-  actionable-push record** (category `FF_REMINDER` / `FF_QUESTION`, the body, and
-  quick-reply labels).
-- Those records are readable at **`GET /agent/pushes`**.
-- This is the exact seam a real APNs sender slots into: poll the records, POST
-  each to Apple's `/3/device/<token>` endpoint (device tokens arrive via
-  `POST /push/register`), mark them delivered. The **iOS side already handles
-  receipt** (contract §11) — only the delivery transport is missing here.
+With no key configured, `push drain` is a **safe no-op** and records stay
+pending — so the backend ships now and delivers the moment the key is dropped in,
+with no code change.
 
-See `Docs/DECISIONS.md` B-04.
+### One-time setup (paid Apple Developer Program)
+
+1. **Create an APNs Auth Key** in the [Apple Developer portal](https://developer.apple.com/account/resources/authkeys/list)
+   (*Certificates, IDs & Profiles → Keys → +*), check **Apple Push Notifications
+   service (APNs)**, register, and **download the `.p8`** (one download only).
+   Note its **Key ID**.
+2. **Find your Team ID** (top-right of the portal).
+3. **Set the env** (uncomment in `.env`) and store the `.p8` outside git:
+
+   ```bash
+   APNS_KEY_PATH=/absolute/path/to/AuthKey_ABC123DEFG.p8
+   APNS_KEY_ID=ABC123DEFG
+   APNS_TEAM_ID=TEAM123456
+   # optional: APNS_BUNDLE_ID=com.trilliumsmith.forefront, APNS_ENV=sandbox|production
+   ```
+
+4. **Deliver:** `forefront push drain`.
+
+### How it works
+
+- **JWT**: ES256 signed from the `.p8` with `node:crypto` (raw `ieee-p1363`
+  signature APNs requires), header `{ alg:"ES256", kid }`, claims `{ iss, iat }`,
+  cached ~50min (APNs rejects tokens > 1h and throttles frequent regeneration).
+- **Send**: HTTP/2 POST via `node:http2` to `/3/device/<token>` with
+  `apns-topic`, `apns-push-type: alert`, `apns-priority: 10`. Zero npm deps —
+  Bun ships `node:crypto` + `node:http2`.
+- **Idempotent**: only `sent = 0` records are drained; a re-run never re-sends.
+- **Auto-drain**: a `push: true` message triggers a best-effort drain, but the
+  durable record means `push drain` always works standalone.
+
+### Sandbox vs production
+
+`APNS_ENV` selects `api.sandbox.push.apple.com` (default; dev + TestFlight) or
+`api.push.apple.com` (App Store). The device token's environment **must match the
+build** — a sandbox token gets `400 BadDeviceToken` / `403` on production and
+vice-versa. `/push/register` records each token's `environment` for a future
+per-env routing pass; today the drain uses the server's `APNS_ENV` for all sends.
+
+See `Docs/DECISIONS.md` B-04 (superseded) / B-06.
 
 ## Storage & cursors
 

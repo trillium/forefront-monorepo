@@ -64,6 +64,13 @@ export async function POST(req: Request, ctx: Ctx) {
       quickReplies: parsed.value.quickReplies,
     })
     pushed = true
+
+    // Best-effort auto-drain: deliver the just-enqueued push immediately when
+    // APNs is configured. The record→send seam is preserved — the record is
+    // already durably enqueued, so `forefront push drain` still delivers it
+    // standalone if this drain no-ops (unconfigured) or fails. Fire-and-forget:
+    // a slow/failing APNs must never block or fail the agent's 201 response.
+    void autoDrain(id)
   }
 
   logActivity(
@@ -71,4 +78,28 @@ export async function POST(req: Request, ctx: Ctx) {
     `Authored ${parsed.value.kind} in ${id}${pushed ? " (+push)" : ""}`,
   )
   return Response.json(serializeMessage(message), { status: 201 })
+}
+
+/**
+ * Fire-and-forget drain triggered right after a `push: true` message is
+ * enqueued. Lazily imports lib/apns so the module graph stays build-safe, and
+ * swallows every error into the activity feed — the durable record is the
+ * source of truth, so a failed auto-drain is recoverable via `push drain`.
+ */
+async function autoDrain(chatId: string): Promise<void> {
+  try {
+    const { drainPushes, isConfigured } = await import("@/lib/apns")
+    if (!isConfigured()) return
+    const summary = await drainPushes()
+    logActivity(
+      "push_drain",
+      `auto-drain after ${chatId}: ${summary.accepted}/${summary.attempts} accepted` +
+        ` across ${summary.deviceCount} device(s)`,
+    )
+  } catch (err) {
+    logActivity(
+      "push_drain_failed",
+      `auto-drain error: ${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
 }
